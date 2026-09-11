@@ -1,0 +1,134 @@
+#!/bin/zsh -f
+
+## Rebuild the status line: which sessions it shows, and in which order.
+## Sessions sit in `@order` order, and the line fits as many as the client is wide, scrolling only
+## when the current session falls outside them, so the sessions around it stay put.
+## See `@status-skeleton` and `@session-item` in `appearance.conf` for what it draws.
+
+typeset item="$(tmux show-option -gqv @session-item)"
+typeset skeleton="$(tmux show-option -gqv @status-skeleton)"
+typeset style="$(tmux show-option -gqv @session-style)"
+typeset style_current="$(tmux show-option -gqv @session-style-current)"
+
+# The line is drawn for an attached client, so its width and its session are the ones that matter.
+# A hook fires with its own session as the target, which can be one nobody is looking at.
+typeset -a clients=(${(f)"$(tmux list-clients -F '#{client_width} #{session_id}')"})
+typeset -i width=0
+typeset current=""
+
+if (( ${#clients} > 0 )); then
+  width=${clients[1]%% *}
+  current="${clients[1]##* }"
+fi
+
+# Order the sessions. A session without an `@order` goes last, in creation order: that is a session
+# just created, and new ones belong at the end of the line.
+typeset -a placed=() new=()
+typeset entry order id
+
+for entry in ${(f)"$(tmux list-sessions -F '#{@order} #{session_id}')"}; do
+  order="${entry%% *}"
+  id="${entry##* }"
+
+  if [[ -n "${order}" ]]; then
+    placed+=("${order}:${id}")
+  else
+    new+=("${id#\$}")
+  fi
+done
+
+typeset -a ids=(${${(n)placed}#*:} ${${(n)new}/#/$})
+typeset -i count=${#ids}
+typeset -i i
+
+# Renumber, so that `@order` stays a gapless 1..n that `tmux-move-session` can step through.
+for (( i = 1; i <= count; i++ )); do
+  if [[ "$(tmux show-option -t "${ids[i]}" -qv @order)" != "${i}" ]]; then
+    tmux set-option -t "${ids[i]}" @order "${i}"
+  fi
+done
+
+typeset -i position=${ids[(i)${current}]}
+
+# Expanding the item per session is how its width is known: it depends on the label and the window
+# names. Styles take no columns, so they come out first.
+typeset -a widths=()
+typeset -i total=0
+typeset label
+
+for (( i = 1; i <= count; i++ )); do
+  label="$(tmux display-message -t "${ids[i]}" -p "${item}" | sed 's/#\[[^]]*\]//g')"
+  widths+=(${#label})
+  total+=${widths[i]}
+done
+
+# The first session on the line. Kept across runs: it is the scroll position.
+typeset -i start=$(tmux show-option -gqv @sessions-viewport-start)
+# Room for the `<` and `>` counters, only needed once something is hidden.
+typeset -i last used avail=$(( width - 8 ))
+
+if (( width <= 0 || total <= width )); then
+  start=1
+  last=${count}
+else
+  if (( start < 1 || start > count )); then
+    start=1
+  fi
+  if (( position < start )); then
+    start=${position}
+  fi
+
+  # Fill the line from `start`, moving it right until the current session is among what fits.
+  while true; do
+    used=0
+    last=$(( start - 1 ))
+
+    for (( i = start; i <= count; i++ )); do
+      if (( used + widths[i] > avail )); then
+        break
+      fi
+      used+=${widths[i]}
+      last=${i}
+    done
+
+    # A session wider than the whole line still has to show when it is the current one.
+    if (( last < start )); then
+      last=${start}
+    fi
+    if (( position <= last )); then
+      break
+    fi
+    start+=1
+  done
+
+  # Sessions closed or shrunk to the right can leave room the viewport has not taken back.
+  while (( last == count && start > 1 && used + widths[start - 1] <= avail )); do
+    start+=-1
+    used+=${widths[start]}
+  done
+fi
+
+# One loop per session, each filtered to a single id, so the line follows `ids` instead of the
+# name order `#{S:}` walks in. The style goes ahead of the loop: the item it wraps is the only one
+# that loop draws.
+typeset sessions=""
+
+for (( i = start; i <= last; i++ )); do
+  if [[ "${ids[i]}" = "${current}" ]]; then
+    sessions+="#[${style_current}]"
+  else
+    sessions+="#[${style}]"
+  fi
+
+  sessions+="#{S:#{?#{==:#{session_id},${ids[i]}},${item},}}"
+done
+
+tmux set-option -g 'status-format[0]' "${skeleton//\%\%SESSIONS\%\%/${sessions}}"
+tmux set-option -g @sessions-viewport-start "${start}"
+tmux set-option -g @sessions-hidden-left "$(( start - 1 ))"
+tmux set-option -g @sessions-hidden-right "$(( count - last ))"
+
+# Hooks run before the redraw they were triggered by, so the line would show the previous viewport.
+# It fails when no client is attached, and a failing hook script prints an error over the line.
+tmux refresh-client -S 2>/dev/null
+exit 0
