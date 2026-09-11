@@ -18,6 +18,9 @@ fi
 if [[ -z "$(tmux show-option -gqv @session-style-current)" ]]; then
   tmux set-option -g @session-style-current "bg=#4689e0,fg=#ffffff"
 fi
+if [[ -z "$(tmux show-option -gqv @session-show-window-index)" ]]; then
+  tmux set-option -g @session-show-window-index "off"
+fi
 
 typeset style="$(tmux show-option -gqv @session-style)"
 
@@ -43,8 +46,15 @@ typeset SESSION_LABEL="#{?@label,#{@label},${SESSION_DIR_SHORT}}"
 tmux set-option -g @session-dir "${SESSION_DIR}"
 tmux set-option -g @session-label "${SESSION_LABEL}"
 
+# The index prefix is off by default: it costs 2+ chars per window, and the line overflows sooner.
+# Turn it on to tell apart two windows that share a name.
+typeset WINDOW_INDEX=""
+if [[ "$(tmux show-option -gqv @session-show-window-index)" == "on" ]]; then
+  WINDOW_INDEX="#{window_index}:"
+fi
+
 typeset WINDOW_LIST="#{W:#[range=user|#{session_id}:#{window_index}]\
-#{window_index}:#{window_name}#{window_flags}#[norange]#{?window_end_flag,,#,}}"
+${WINDOW_INDEX}#{window_name}#{window_flags}#[norange]#{?window_end_flag,,#,}}"
 
 typeset SESSION_ITEM="#[range=user|#{session_id}]  ${SESSION_LABEL}(#[norange]\
 ${WINDOW_LIST}#[range=user|#{session_id}])  #[norange]"

@@ -33,10 +33,11 @@ Requires `zsh` on `PATH` and tmux 3.2 or newer (`status-format`, `#{S:}`, `list-
 
 Set these before the plugin loads. They are only defaulted, so yours win.
 
-| Option | Default | What it styles |
+| Option | Default | What it does |
 | --- | --- | --- |
-| `@session-style` | `bg=#f0f6fe,fg=#6e7781` | The line, and every session that is not current |
-| `@session-style-current` | `bg=#4689e0,fg=#ffffff` | The current session |
+| `@session-style` | `bg=#f0f6fe,fg=#6e7781` | Styles the line, and every session that is not current |
+| `@session-style-current` | `bg=#4689e0,fg=#ffffff` | Styles the current session |
+| `@session-show-window-index` | `off` | `on` prefixes each window with its index, as `0:nvim` |
 
 It also publishes two read-only options, for a config that wants the same text elsewhere. Both hold
 a format, so reading one takes `#{E:...}` to expand it a second time:
