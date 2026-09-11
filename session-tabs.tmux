@@ -38,6 +38,11 @@ typeset SESSION_DIR_SHORT="#{s,([^/])[^/][^/]+/,\\1…/,:${SESSION_DIR}}"
 # A session shows its label when it has one.
 typeset SESSION_LABEL="#{?@label,#{@label},${SESSION_DIR_SHORT}}"
 
+# Published for a config that wants the same text elsewhere, e.g. `set-titles-string`. They hold a
+# format, so reading them takes `#{E:@session-dir}` to expand it a second time.
+tmux set-option -g @session-dir "${SESSION_DIR}"
+tmux set-option -g @session-label "${SESSION_LABEL}"
+
 typeset WINDOW_LIST="#{W:#[range=user|#{session_id}:#{window_index}]\
 #{window_index}:#{window_name}#{window_flags}#[norange]#{?window_end_flag,,#,}}"
 
@@ -93,8 +98,8 @@ tmux bind -N "Select last active session" Tab switch-client -l
 
 # Select and move sessions on the status line.
 # (Overrides selecting the pane in a direction).
-tmux bind -N "Select the previous session" -r Up switch-client -p
-tmux bind -N "Select the next session" -r Down switch-client -n
+tmux bind -N "Select the previous session" -r Up run-shell "${scripts}/tmux-select-session prev"
+tmux bind -N "Select the next session" -r Down run-shell "${scripts}/tmux-select-session next"
 tmux bind -N "Move session left" -r Left run-shell "${scripts}/tmux-move-session left"
 tmux bind -N "Move session right" -r Right run-shell "${scripts}/tmux-move-session right"
 

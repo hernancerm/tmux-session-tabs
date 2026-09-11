@@ -1,0 +1,63 @@
+#!/bin/zsh -f
+
+## Select the previous or next tmux session on the status line.
+## `switch-client -p/-n` walks sessions by name, which is not the order the line draws, so the step
+## goes through `@order` instead. It wraps around the ends, as `switch-client -p/-n` does.
+## @param:string $1 Direction, either 'prev' or 'next'.
+
+typeset direction="${1}"
+
+if [[ "${direction}" != 'prev' && "${direction}" != 'next' ]]; then
+  echo "Usage: $(basename "$0") <prev|next>"
+  exit 1
+fi
+
+# The session the client is on, not the one a hook happens to target.
+typeset client="$(tmux list-clients -F '#{client_tty} #{session_id} #{client_key_table}' | head -1)"
+
+if [[ -z "${client}" ]]; then
+  exit
+fi
+
+typeset -a fields=(${=client})
+typeset tty="${fields[1]}"
+typeset current="${fields[2]}"
+typeset table="${fields[3]}"
+typeset -i position=$(tmux show-option -t "${current}" -qv @order)
+
+# A session created moments ago has no `@order` yet: the hook that assigns it has not run.
+if (( position == 0 )); then
+  exit
+fi
+
+typeset -i count=$(tmux list-sessions -F '#{session_id}' | wc -l)
+typeset -i target
+
+if [[ "${direction}" = 'prev' ]]; then
+  target=$(( position - 1 ))
+else
+  target=$(( position + 1 ))
+fi
+
+if (( target < 1 )); then
+  target=${count}
+fi
+if (( target > count )); then
+  target=1
+fi
+
+typeset neighbor="$(tmux list-sessions -f "#{==:#{@order},${target}}" -F '#{session_id}')"
+
+if [[ -z "${neighbor}" ]]; then
+  exit
+fi
+
+# A `switch-client` run from a shell resets the client to the root key table, which drops the
+# repeat armed by `bind -r`: the next arrow arrives with no prefix and matches nothing. The same
+# command inside the binding is exempt, so only this path has to put the table back, in the same
+# invocation to keep it to one round trip.
+if [[ "${table}" = 'root' ]]; then
+  tmux switch-client -c "${tty}" -t "${neighbor}"
+else
+  tmux switch-client -c "${tty}" -t "${neighbor}" \; switch-client -c "${tty}" -T "${table}"
+fi

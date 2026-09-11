@@ -38,6 +38,18 @@ Set these before the plugin loads. They are only defaulted, so yours win.
 | `@session-style` | `bg=#f0f6fe,fg=#6e7781` | The line, and every session that is not current |
 | `@session-style-current` | `bg=#4689e0,fg=#ffffff` | The current session |
 
+It also publishes two read-only options, for a config that wants the same text elsewhere. Both hold
+a format, so reading one takes `#{E:...}` to expand it a second time:
+
+```tmux
+set -g set-titles-string "#{E:@session-dir}"
+```
+
+| Option | Holds |
+| --- | --- |
+| `@session-dir` | The current directory, with `$HOME` as `~` |
+| `@session-label` | What the tab draws: the label, or the shortened directory |
+
 A style cannot be written inside a `#{?...}` format instead: the comma in `bg=...,fg=...` would
 read as the separator between the branches of the conditional. That is why the script picks one of
 the two and puts it ahead of each loop.
@@ -50,8 +62,8 @@ the two and puts it ahead of each loop.
 | `;` | Label the current session (overrides "Select the previously active pane") |
 | `w` | Kill the current session (overrides "Choose a window from a list") |
 | `Tab` | Select the last active session |
-| `Up` / `Down` | Select the previous / next session |
-| `Left` / `Right` | Move the current session left / right on the line |
+| `Up` / `Down` | Select the previous / next session on the line, wrapping at the ends |
+| `Left` / `Right` | Move the current session left / right on the line, stopping at the ends |
 | left click | Focus the clicked session or window |
 | middle click | Kill the clicked session or window, after a confirmation |
 
@@ -67,6 +79,10 @@ A session with no label shows its current directory, shortened one char per pare
 (`~/dev/repos/foo` reads `~/d…/r…/foo`). `;` sets a label, and renames the session to match, so
 `attach -t`, `switch-client -t` and `choose-tree` use the same word you see on the line. An empty
 label clears both.
+
+Selection follows the line, not tmux's own session order: `switch-client -p/-n` walks sessions by
+name, so a session named `0` by `C-b t` sits before every labelled one, and the two orders disagree
+as soon as one exists. `tmux-select-session` steps through `@order` instead.
 
 ## Known issues
 

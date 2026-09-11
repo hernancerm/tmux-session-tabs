@@ -24,11 +24,13 @@ fi
 # Order the sessions. A session without an `@order` goes last, in creation order: that is a session
 # just created, and new ones belong at the end of the line.
 typeset -a placed=() new=()
+typeset -A was
 typeset entry order id
 
 for entry in ${(f)"$(tmux list-sessions -F '#{@order} #{session_id}')"}; do
   order="${entry%% *}"
   id="${entry##* }"
+  was[${id}]="${order}"
 
   if [[ -n "${order}" ]]; then
     placed+=("${order}:${id}")
@@ -43,7 +45,7 @@ typeset -i i
 
 # Renumber, so that `@order` stays a gapless 1..n that `tmux-move-session` can step through.
 for (( i = 1; i <= count; i++ )); do
-  if [[ "$(tmux show-option -t "${ids[i]}" -qv @order)" != "${i}" ]]; then
+  if [[ "${was[${ids[i]}]}" != "${i}" ]]; then
     tmux set-option -t "${ids[i]}" @order "${i}"
   fi
 done
@@ -52,13 +54,17 @@ typeset -i position=${ids[(i)${current}]}
 
 # Expanding the item per session is how its width is known: it depends on the label and the window
 # names. Styles take no columns, so they come out first.
+typeset -A measured
+
+for entry in ${(f)"$(tmux list-sessions -F "#{session_id} ${item}" | sed 's/#\[[^]]*\]//g')"}; do
+  measured[${entry%% *}]=${#${entry#* }}
+done
+
 typeset -a widths=()
 typeset -i total=0
-typeset label
 
 for (( i = 1; i <= count; i++ )); do
-  label="$(tmux display-message -t "${ids[i]}" -p "${item}" | sed 's/#\[[^]]*\]//g')"
-  widths+=(${#label})
+  widths+=(${measured[${ids[i]}]})
   total+=${widths[i]}
 done
 
@@ -123,12 +129,14 @@ for (( i = start; i <= last; i++ )); do
   sessions+="#{S:#{?#{==:#{session_id},${ids[i]}},${item},}}"
 done
 
-tmux set-option -g 'status-format[0]' "${skeleton//\%\%SESSIONS\%\%/${sessions}}"
-tmux set-option -g @sessions-viewport-start "${start}"
-tmux set-option -g @sessions-hidden-left "$(( start - 1 ))"
-tmux set-option -g @sessions-hidden-right "$(( count - last ))"
-
-# Hooks run before the redraw they were triggered by, so the line would show the previous viewport.
-# It fails when no client is attached, and a failing hook script prints an error over the line.
-tmux refresh-client -S 2>/dev/null
+# One invocation: every command to the server costs a process and a round trip, and this runs on
+# every session switch, resize and window change.
+# `refresh-client` goes last because it redraws what the options above just set, and because it
+# fails when no client is attached, which would stop anything after it. A failing hook script
+# prints an error over the line, hence the silenced stderr.
+tmux set-option -g 'status-format[0]' "${skeleton//\%\%SESSIONS\%\%/${sessions}}" \; \
+  set-option -g @sessions-viewport-start "${start}" \; \
+  set-option -g @sessions-hidden-left "$(( start - 1 ))" \; \
+  set-option -g @sessions-hidden-right "$(( count - last ))" \; \
+  refresh-client -S 2>/dev/null
 exit 0
