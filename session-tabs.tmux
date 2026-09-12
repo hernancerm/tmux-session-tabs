@@ -1,12 +1,12 @@
-#!/bin/zsh -f
+#!/usr/bin/env bash
 
 ## Entry point: sets the status line format, the hooks that rebuild it, and the key bindings that
 ## drive it. Written as a script rather than a `.conf` file because a config file expands `${...}`
 ## for the whole file before running any of its commands, which forces theme values to be set from
 ## an already-executed `source`. A script has no such ordering problem.
 
-typeset plugin="${0:A:h}"
-typeset scripts="${plugin}/scripts"
+plugin="$(cd "$(dirname "$0")" && pwd -P)"
+scripts="${plugin}/scripts"
 
 
 # OPTIONS
@@ -22,7 +22,7 @@ if [[ -z "$(tmux show-option -gqv @session-show-window-index)" ]]; then
   tmux set-option -g @session-show-window-index "off"
 fi
 
-typeset style="$(tmux show-option -gqv @session-style)"
+style="$(tmux show-option -gqv @session-style)"
 
 
 # STATUS LINE
@@ -30,16 +30,16 @@ typeset style="$(tmux show-option -gqv @session-style)"
 tmux set-option -g status-style "${style}"
 
 # Pane current path with `$HOME` substituted with `~`.
-typeset SESSION_DIR="#{s|^${HOME}|~|:pane_current_path}"
+SESSION_DIR="#{s|^${HOME}|~|:pane_current_path}"
 # Shorten every parent dir to its first char. Only names of 3+ chars shrink.
 # Examples:
 #   ~/dev/repos/foo  ->  ~/d…/r…/foo
 #   ~/xy/abc/foo     ->  ~/xy/a…/foo
 #   ~/x/abc/foo      ->  ~/x/a…/foo
-typeset SESSION_DIR_SHORT="#{s,([^/])[^/][^/]+/,\\1…/,:${SESSION_DIR}}"
+SESSION_DIR_SHORT="#{s,([^/])[^/][^/]+/,\\1…/,:${SESSION_DIR}}"
 
 # A session shows its label when it has one.
-typeset SESSION_LABEL="#{?@label,#{@label},${SESSION_DIR_SHORT}}"
+SESSION_LABEL="#{?@label,#{@label},${SESSION_DIR_SHORT}}"
 
 # Published for a config that wants the same text elsewhere, e.g. `set-titles-string`. They hold a
 # format, so reading them takes `#{E:@session-dir}` to expand it a second time.
@@ -48,20 +48,20 @@ tmux set-option -g @session-label "${SESSION_LABEL}"
 
 # The index prefix is off by default: it costs 2+ chars per window, and the line overflows sooner.
 # Turn it on to tell apart two windows that share a name.
-typeset WINDOW_INDEX=""
+WINDOW_INDEX=""
 if [[ "$(tmux show-option -gqv @session-show-window-index)" == "on" ]]; then
   WINDOW_INDEX="#{window_index}:"
 fi
 
-typeset WINDOW_LIST="#{W:#[range=user|#{session_id}:#{window_index}]\
+WINDOW_LIST="#{W:#[range=user|#{session_id}:#{window_index}]\
 ${WINDOW_INDEX}#{window_name}#{window_flags}#[norange]#{?window_end_flag,,#,}}"
 
-typeset SESSION_ITEM="#[range=user|#{session_id}]  ${SESSION_LABEL}(#[norange]\
+SESSION_ITEM="#[range=user|#{session_id}]  ${SESSION_LABEL}(#[norange]\
 ${WINDOW_LIST}#[range=user|#{session_id}])  #[norange]"
 
 # Sessions outside the viewport are left out of the line, and counted on the edge they fell off.
-typeset HIDDEN_LEFT="#{?@sessions-hidden-left, <#{@sessions-hidden-left},}"
-typeset HIDDEN_RIGHT="#{?@sessions-hidden-right,#{@sessions-hidden-right}> ,}"
+HIDDEN_LEFT="#{?@sessions-hidden-left, <#{@sessions-hidden-left},}"
+HIDDEN_RIGHT="#{?@sessions-hidden-right,#{@sessions-hidden-right}> ,}"
 
 # `#{S:}` walks sessions sorted by name, so the line cannot order them on its own.
 # `tmux-status-viewport` writes `status-format[0]`: it replaces the placeholder with one loop per
@@ -79,8 +79,6 @@ tmux set-option -g status-interval 1
 
 # The status line is rebuilt by `tmux-status-viewport`: it orders sessions, fits as many as the
 # client is wide, and writes `status-format[0]`.
-typeset hook
-
 for hook in client-attached client-session-changed client-resized \
             session-created session-closed window-unlinked window-linked; do
   tmux set-hook -g "${hook}" "run-shell ${scripts}/tmux-status-viewport"
@@ -98,16 +96,18 @@ tmux set-option -g detach-on-destroy off
 # binds nothing.
 #   bind-session-key <option> <description> [-r] <tmux-command>...
 bind-session-key() {
-  typeset option="$1" note="$2"
+  local option="$1" note="$2"
   shift 2
 
-  typeset -a flags
+  local flags
+  flags=()
   if [[ "$1" == "-r" ]]; then
     flags=(-r)
     shift
   fi
 
-  typeset key="$(tmux show-option -gqv "${option}")"
+  local key
+  key="$(tmux show-option -gqv "${option}")"
   if [[ -z "${key}" ]]; then
     return
   fi

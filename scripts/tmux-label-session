@@ -1,4 +1,4 @@
-#!/bin/zsh -f
+#!/usr/bin/env bash
 
 ## Label the current tmux session, and name the session after the label.
 ## The label is what the status line draws; the name is what `attach -t`, `switch-client -t` and
@@ -6,19 +6,21 @@
 ## have named it.
 ## @param:string $1 The label. Empty to clear it.
 
-typeset label="${1}"
+scripts="$(cd "$(dirname "$0")" && pwd -P)"
+
+label="${1}"
 # `rename-session` turns `.` and `:` into `_`, so the name to claim is not always the label.
-typeset name="${label//[.:]/_}"
+name="${label//[.:]/_}"
 
 # The session the client is on, not the one a hook happens to target.
-typeset current="$(tmux list-clients -F '#{session_id}' | head -1)"
+current="$(tmux list-clients -F '#{session_id}' | head -1)"
 
 if [[ -z "${current}" ]]; then
   exit
 fi
 
 if [[ -n "${name}" ]]; then
-  typeset other="$(tmux list-sessions -f "#{&&:#{==:#{session_name},${name}},\
+  other="$(tmux list-sessions -f "#{&&:#{==:#{session_name},${name}},\
 #{!=:#{session_id},${current}}}" -F '#{session_id}')"
 
   if [[ -n "${other}" ]]; then
@@ -29,10 +31,10 @@ fi
 
 if [[ -z "${name}" ]]; then
   # Lowest free number, the name tmux gives a session when nobody names it.
-  typeset -i n=0
+  n=0
 
   while tmux has-session -t "=${n}" 2>/dev/null; do
-    n+=1
+    n=$(( n + 1 ))
   done
 
   name="${n}"
@@ -40,4 +42,4 @@ fi
 
 tmux set-option -t "${current}" @label "${label}"
 tmux rename-session -t "${current}" "${name}"
-"${0:A:h}/tmux-status-viewport"
+"${scripts}/tmux-status-viewport"

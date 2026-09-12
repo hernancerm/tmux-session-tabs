@@ -27,7 +27,8 @@ Manually:
 run-shell ~/path/to/tmux-session-tabs/session-tabs.tmux
 ```
 
-Requires `zsh` on `PATH` and tmux 3.2 or newer (`status-format`, `#{S:}`, `list-sessions -f`).
+Requires `bash` 3.2 or newer, the version macOS ships, and tmux 3.2 or newer (`status-format`,
+`#{S:}`, `list-sessions -f`).
 
 ## Options
 

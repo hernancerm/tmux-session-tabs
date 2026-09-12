@@ -1,11 +1,13 @@
-#!/bin/zsh -f
+#!/usr/bin/env bash
 
 ## Move the current tmux session left or right on the status line.
 ## The line is ordered by `@order`, so moving one is swapping its number with its neighbor's.
 ## `tmux-status-viewport` keeps those numbers a gapless 1..n, so the neighbor is one step away.
 ## @param:string $1 Direction, either 'left' or 'right'.
 
-typeset direction="${1}"
+scripts="$(cd "$(dirname "$0")" && pwd -P)"
+
+direction="${1}"
 
 if [[ "${direction}" != 'left' && "${direction}" != 'right' ]]; then
   echo "Usage: $(basename "$0") <left|right>"
@@ -13,14 +15,15 @@ if [[ "${direction}" != 'left' && "${direction}" != 'right' ]]; then
 fi
 
 # The session the client is on, not the one a hook happens to target.
-typeset current="$(tmux list-clients -F '#{session_id}' | head -1)"
+current="$(tmux list-clients -F '#{session_id}' | head -1)"
 
 if [[ -z "${current}" ]]; then
   exit
 fi
 
-typeset -i position=$(tmux show-option -t "${current}" -qv @order)
-typeset -i target
+position="$(tmux show-option -t "${current}" -qv @order)"
+# A session with no `@order` yet reads empty, and the swap below writes this value back.
+position=$(( position ))
 
 if [[ "${direction}" = 'left' ]]; then
   target=$(( position - 1 ))
@@ -28,7 +31,7 @@ else
   target=$(( position + 1 ))
 fi
 
-typeset neighbor="$(tmux list-sessions -f "#{==:#{@order},${target}}" -F '#{session_id}')"
+neighbor="$(tmux list-sessions -f "#{==:#{@order},${target}}" -F '#{session_id}')"
 
 if [[ -z "${neighbor}" ]]; then
   exit
@@ -36,4 +39,4 @@ fi
 
 tmux set-option -t "${current}" @order "${target}"
 tmux set-option -t "${neighbor}" @order "${position}"
-"${0:A:h}/tmux-status-viewport"
+"${scripts}/tmux-status-viewport"

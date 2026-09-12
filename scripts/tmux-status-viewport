@@ -1,77 +1,106 @@
-#!/bin/zsh -f
+#!/usr/bin/env bash
 
 ## Rebuild the status line: which sessions it shows, and in which order.
 ## Sessions sit in `@order` order, and the line fits as many as the client is wide, scrolling only
 ## when the current session falls outside them, so the sessions around it stay put.
-## See `@status-skeleton` and `@session-item` in `appearance.conf` for what it draws.
+## See `@status-skeleton` and `@session-item` in `session-tabs.tmux` for what it draws.
 
-typeset item="$(tmux show-option -gqv @session-item)"
-typeset skeleton="$(tmux show-option -gqv @status-skeleton)"
-typeset style="$(tmux show-option -gqv @session-style)"
-typeset style_current="$(tmux show-option -gqv @session-style-current)"
+item="$(tmux show-option -gqv @session-item)"
+skeleton="$(tmux show-option -gqv @status-skeleton)"
+style="$(tmux show-option -gqv @session-style)"
+style_current="$(tmux show-option -gqv @session-style-current)"
 
 # The line is drawn for an attached client, so its width and its session are the ones that matter.
 # A hook fires with its own session as the target, which can be one nobody is looking at.
-typeset -a clients=(${(f)"$(tmux list-clients -F '#{client_width} #{session_id}')"})
-typeset -i width=0
-typeset current=""
+width=0
+current=""
+read -r width current < <(tmux list-clients -F '#{client_width} #{session_id}')
 
-if (( ${#clients} > 0 )); then
-  width=${clients[1]%% *}
-  current="${clients[1]##* }"
-fi
+# `was` and `measured` are keyed by the number in the session id (`$3` -> 3): bash 3.2, the one
+# macOS ships, has no associative arrays, and a session id is always `$` and a number.
 
 # Order the sessions. A session without an `@order` goes last, in creation order: that is a session
-# just created, and new ones belong at the end of the line.
-typeset -a placed=() new=()
-typeset -A was
-typeset entry order id
+# just created, and new ones belong at the end of the line. Hence the two sort keys: placed before
+# new, then by `@order` or by the id, which counts up with every session tmux makes.
+entries=()
+was=()
+entry=""
+order=""
+id=""
 
-for entry in ${(f)"$(tmux list-sessions -F '#{@order} #{session_id}')"}; do
+while IFS= read -r entry; do
   order="${entry%% *}"
   id="${entry##* }"
-  was[${id}]="${order}"
+  was[${id#\$}]="${order}"
 
   if [[ -n "${order}" ]]; then
-    placed+=("${order}:${id}")
+    entries+=("1 ${order} ${id}")
   else
-    new+=("${id#\$}")
+    entries+=("2 ${id#\$} ${id}")
   fi
-done
+done < <(tmux list-sessions -F '#{@order} #{session_id}')
 
-typeset -a ids=(${${(n)placed}#*:} ${${(n)new}/#/$})
-typeset -i count=${#ids}
-typeset -i i
+# Index 0 stays empty: `ids[i]` is the session whose `@order` is `i`, and those count from 1.
+ids=("")
+
+# Guarded because `printf` with no arguments still runs its format once, which would feed the loop
+# an empty line and put a session that does not exist on the line.
+if (( ${#entries[@]} > 0 )); then
+  while IFS= read -r entry; do
+    ids+=("${entry##* }")
+  done < <(printf '%s\n' "${entries[@]}" | sort -k1,1n -k2,2n)
+fi
+
+count=$(( ${#ids[@]} - 1 ))
+i=0
+num=""
 
 # Renumber, so that `@order` stays a gapless 1..n that `tmux-move-session` can step through.
 for (( i = 1; i <= count; i++ )); do
-  if [[ "${was[${ids[i]}]}" != "${i}" ]]; then
+  num="${ids[i]#\$}"
+
+  if [[ "${was[num]}" != "${i}" ]]; then
     tmux set-option -t "${ids[i]}" @order "${i}"
   fi
 done
 
-typeset -i position=${ids[(i)${current}]}
+# Past the end when the current session is not on the line, which keeps the fit loop below from
+# looking for it forever.
+position=$(( count + 1 ))
+
+for (( i = 1; i <= count; i++ )); do
+  if [[ "${ids[i]}" = "${current}" ]]; then
+    position=${i}
+    break
+  fi
+done
 
 # Expanding the item per session is how its width is known: it depends on the label and the window
 # names. Styles take no columns, so they come out first.
-typeset -A measured
+measured=()
+text=""
 
-for entry in ${(f)"$(tmux list-sessions -F "#{session_id} ${item}" | sed 's/#\[[^]]*\]//g')"}; do
-  measured[${entry%% *}]=${#${entry#* }}
-done
+while IFS= read -r entry; do
+  id="${entry%% *}"
+  text="${entry#* }"
+  measured[${id#\$}]=${#text}
+done < <(tmux list-sessions -F "#{session_id} ${item}" | sed 's/#\[[^]]*\]//g')
 
-typeset -a widths=()
-typeset -i total=0
+widths=("")
+total=0
 
 for (( i = 1; i <= count; i++ )); do
-  widths+=(${measured[${ids[i]}]})
-  total+=${widths[i]}
+  num="${ids[i]#\$}"
+  widths+=("${measured[num]}")
+  total=$(( total + widths[i] ))
 done
 
 # The first session on the line. Kept across runs: it is the scroll position.
-typeset -i start=$(tmux show-option -gqv @sessions-viewport-start)
+start="$(tmux show-option -gqv @sessions-viewport-start)"
 # Room for the `<` and `>` counters, only needed once something is hidden.
-typeset -i last used avail=$(( width - 8 ))
+avail=$(( width - 8 ))
+used=0
+last=0
 
 if (( width <= 0 || total <= width )); then
   start=1
@@ -93,7 +122,7 @@ else
       if (( used + widths[i] > avail )); then
         break
       fi
-      used+=${widths[i]}
+      used=$(( used + widths[i] ))
       last=${i}
     done
 
@@ -104,20 +133,20 @@ else
     if (( position <= last )); then
       break
     fi
-    start+=1
+    start=$(( start + 1 ))
   done
 
   # Sessions closed or shrunk to the right can leave room the viewport has not taken back.
   while (( last == count && start > 1 && used + widths[start - 1] <= avail )); do
-    start+=-1
-    used+=${widths[start]}
+    start=$(( start - 1 ))
+    used=$(( used + widths[start] ))
   done
 fi
 
 # One loop per session, each filtered to a single id, so the line follows `ids` instead of the
 # name order `#{S:}` walks in. The style goes ahead of the loop: the item it wraps is the only one
 # that loop draws.
-typeset sessions=""
+sessions=""
 
 for (( i = start; i <= last; i++ )); do
   if [[ "${ids[i]}" = "${current}" ]]; then
@@ -134,7 +163,7 @@ done
 # `refresh-client` goes last because it redraws what the options above just set, and because it
 # fails when no client is attached, which would stop anything after it. A failing hook script
 # prints an error over the line, hence the silenced stderr.
-tmux set-option -g 'status-format[0]' "${skeleton//\%\%SESSIONS\%\%/${sessions}}" \; \
+tmux set-option -g 'status-format[0]' "${skeleton//%%SESSIONS%%/${sessions}}" \; \
   set-option -g @sessions-viewport-start "${start}" \; \
   set-option -g @sessions-hidden-left "$(( start - 1 ))" \; \
   set-option -g @sessions-hidden-right "$(( count - last ))" \; \

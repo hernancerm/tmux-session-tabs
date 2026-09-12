@@ -1,37 +1,37 @@
-#!/bin/zsh -f
+#!/usr/bin/env bash
 
 ## Select the previous or next tmux session on the status line.
 ## `switch-client -p/-n` walks sessions by name, which is not the order the line draws, so the step
 ## goes through `@order` instead. It wraps around the ends, as `switch-client -p/-n` does.
 ## @param:string $1 Direction, either 'prev' or 'next'.
 
-typeset direction="${1}"
+direction="${1}"
 
 if [[ "${direction}" != 'prev' && "${direction}" != 'next' ]]; then
   echo "Usage: $(basename "$0") <prev|next>"
   exit 1
 fi
 
-# The session the client is on, not the one a hook happens to target.
-typeset client="$(tmux list-clients -F '#{client_tty} #{session_id} #{client_key_table}' | head -1)"
+# The client the keys came from, not the session a hook happens to target.
+tty=""
+current=""
+table=""
+read -r tty current table < <(tmux list-clients -F '#{client_tty} #{session_id} #{client_key_table}')
 
-if [[ -z "${client}" ]]; then
+if [[ -z "${current}" ]]; then
   exit
 fi
 
-typeset -a fields=(${=client})
-typeset tty="${fields[1]}"
-typeset current="${fields[2]}"
-typeset table="${fields[3]}"
-typeset -i position=$(tmux show-option -t "${current}" -qv @order)
+position="$(tmux show-option -t "${current}" -qv @order)"
 
 # A session created moments ago has no `@order` yet: the hook that assigns it has not run.
 if (( position == 0 )); then
   exit
 fi
 
-typeset -i count=$(tmux list-sessions -F '#{session_id}' | wc -l)
-typeset -i target
+# `$(( ))` drops the spaces `wc` pads its count with: the count goes into a tmux format below,
+# where a space would stop the match.
+count=$(( $(tmux list-sessions -F '#{session_id}' | wc -l) ))
 
 if [[ "${direction}" = 'prev' ]]; then
   target=$(( position - 1 ))
@@ -46,7 +46,7 @@ if (( target > count )); then
   target=1
 fi
 
-typeset neighbor="$(tmux list-sessions -f "#{==:#{@order},${target}}" -F '#{session_id}')"
+neighbor="$(tmux list-sessions -f "#{==:#{@order},${target}}" -F '#{session_id}')"
 
 if [[ -z "${neighbor}" ]]; then
   exit
