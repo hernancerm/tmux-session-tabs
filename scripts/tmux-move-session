@@ -4,18 +4,24 @@
 ## The line is ordered by `@order`, so moving one is swapping its number with its neighbor's.
 ## `tmux-status-viewport` keeps those numbers a gapless 1..n, so the neighbor is one step away.
 ## @param:string $1 Direction, either 'left' or 'right'.
+## @param:string $2 The session to move. Defaults to the one the first client is on.
 
 scripts="$(cd "$(dirname "$0")" && pwd -P)"
 
 direction="${1}"
 
 if [[ "${direction}" != 'left' && "${direction}" != 'right' ]]; then
-  echo "Usage: $(basename "$0") <left|right>"
+  echo "Usage: $(basename "$0") <left|right> [session-id]"
   exit 1
 fi
 
-# The session the client is on, not the one a hook happens to target.
-current="$(tmux list-clients -F '#{session_id}' | head -1)"
+# The binding passes its own client's session: with two clients on one server, `list-clients` says
+# nothing about which of them pressed the key.
+current="${2}"
+
+if [[ -z "${current}" ]]; then
+  current="$(tmux list-clients -F '#{session_id}' | head -1)"
+fi
 
 if [[ -z "${current}" ]]; then
   exit

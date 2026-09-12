@@ -11,14 +11,32 @@ style_fill="$(tmux show-option -gqv @session-style-fill)"
 style_sel="$(tmux show-option -gqv @session-style-sel)"
 right_length="$(tmux show-option -gqv @session-right-length)"
 
-# The line is drawn for an attached client, so its width and its session are the ones that matter.
-# A hook fires with its own session as the target, which can be one nobody is looking at.
-width=0
-current=""
-read -r width current < <(tmux list-clients -F '#{client_width} #{session_id}')
+# `was`, `measured`, `client_width` and `client_tty` are keyed by the number in the session id
+# (`$3` -> 3): bash 3.2, the one macOS ships, has no associative arrays, and a session id is
+# always `$` and a number.
 
-# `was` and `measured` are keyed by the number in the session id (`$3` -> 3): bash 3.2, the one
-# macOS ships, has no associative arrays, and a session id is always `$` and a number.
+# A line is built per attached session, not once for the server: `status-format` is a session
+# option, so two clients on different sessions each get their own width and their own highlight.
+# Two clients on one session still share a line, tmux has no per-client option; the narrower one
+# decides, as tmux does when it sizes a shared session.
+attached=()
+client_width=()
+client_tty=()
+width=""
+sid=""
+tty=""
+
+while read -r width sid tty; do
+  num="${sid#\$}"
+
+  if [[ -z "${client_width[num]}" ]]; then
+    attached+=("${sid}")
+    client_width[num]="${width}"
+    client_tty[num]="${tty}"
+  elif (( width < client_width[num] )); then
+    client_width[num]="${width}"
+  fi
+done < <(tmux list-clients -F '#{client_width} #{session_id} #{client_tty}')
 
 # Order the sessions. A session without an `@order` goes last, in creation order: that is a session
 # just created, and new ones belong at the end of the line. Hence the two sort keys: placed before
@@ -65,17 +83,6 @@ for (( i = 1; i <= count; i++ )); do
   fi
 done
 
-# Past the end when the current session is not on the line, which keeps the fit loop below from
-# looking for it forever.
-position=$(( count + 1 ))
-
-for (( i = 1; i <= count; i++ )); do
-  if [[ "${ids[i]}" = "${current}" ]]; then
-    position=${i}
-    break
-  fi
-done
-
 # Expanding the item per session is how its width is known: it depends on the label and the window
 # names. Styles take no columns, so they come out first.
 measured=()
@@ -96,81 +103,132 @@ for (( i = 1; i <= count; i++ )); do
   total=$(( total + widths[i] ))
 done
 
-# The first session on the line. Kept across runs: it is the scroll position.
-start="$(tmux show-option -gqv @sessions-viewport-start)"
-# Columns the tabs may use: the client width less what `@session-right` was declared to take.
-room=$(( width - right_length ))
-# Room for the `<` and `>` counters, only needed once something is hidden.
-avail=$(( room - 8 ))
-used=0
-last=0
+# The line for one client: `$1` columns wide, sitting on session `$2`, scrolled so that `$3` is the
+# first session shown. Leaves the line in `line`, and the scroll position it settled on in `start`
+# and `last`, which the caller stores back.
+fit_line() {
+  local width="$1" current="$2"
+  local i position room avail
 
-# `room <= 0` also covers having no client to measure, and keeps the fit loop below from running
-# with nothing to fill.
-if (( room <= 0 || total <= room )); then
-  start=1
-  last=${count}
-else
-  if (( start < 1 || start > count )); then
-    start=1
-  fi
-  if (( position < start )); then
-    start=${position}
-  fi
+  # Past the end when the current session is not on the line, which keeps the fit loop below from
+  # looking for it forever.
+  position=$(( count + 1 ))
 
-  # Fill the line from `start`, moving it right until the current session is among what fits.
-  while true; do
-    used=0
-    last=$(( start - 1 ))
-
-    for (( i = start; i <= count; i++ )); do
-      if (( used + widths[i] > avail )); then
-        break
-      fi
-      used=$(( used + widths[i] ))
-      last=${i}
-    done
-
-    # A session wider than the whole line still has to show when it is the current one.
-    if (( last < start )); then
-      last=${start}
-    fi
-    if (( position <= last )); then
+  for (( i = 1; i <= count; i++ )); do
+    if [[ "${ids[i]}" = "${current}" ]]; then
+      position=${i}
       break
     fi
-    start=$(( start + 1 ))
   done
 
-  # Sessions closed or shrunk to the right can leave room the viewport has not taken back.
-  while (( last == count && start > 1 && used + widths[start - 1] <= avail )); do
-    start=$(( start - 1 ))
-    used=$(( used + widths[start] ))
-  done
-fi
+  # Columns the tabs may use: the client width less what `@session-right` was declared to take.
+  room=$(( width - right_length ))
+  # Room for the `<` and `>` counters, only needed once something is hidden.
+  avail=$(( room - 8 ))
+  start="$3"
+  used=0
+  last=0
 
-# One loop per session, each filtered to a single id, so the line follows `ids` instead of the
-# name order `#{S:}` walks in. The style goes ahead of the loop: the item it wraps is the only one
-# that loop draws.
-sessions=""
-
-for (( i = start; i <= last; i++ )); do
-  if [[ "${ids[i]}" = "${current}" ]]; then
-    sessions+="#[${style_sel}]"
+  # `room <= 0` also covers having no client to measure, and keeps the fit loop below from running
+  # with nothing to fill.
+  if (( room <= 0 || total <= room )); then
+    start=1
+    last=${count}
   else
-    sessions+="#[${style_fill}]"
+    if (( start < 1 || start > count )); then
+      start=1
+    fi
+    if (( position < start )); then
+      start=${position}
+    fi
+
+    # Fill the line from `start`, moving it right until the current session is among what fits.
+    while true; do
+      used=0
+      last=$(( start - 1 ))
+
+      for (( i = start; i <= count; i++ )); do
+        if (( used + widths[i] > avail )); then
+          break
+        fi
+        used=$(( used + widths[i] ))
+        last=${i}
+      done
+
+      # A session wider than the whole line still has to show when it is the current one.
+      if (( last < start )); then
+        last=${start}
+      fi
+      if (( position <= last )); then
+        break
+      fi
+      start=$(( start + 1 ))
+    done
+
+    # Sessions closed or shrunk to the right can leave room the viewport has not taken back.
+    while (( last == count && start > 1 && used + widths[start - 1] <= avail )); do
+      start=$(( start - 1 ))
+      used=$(( used + widths[start] ))
+    done
   fi
 
-  sessions+="#{S:#{?#{==:#{session_id},${ids[i]}},${item},}}"
-done
+  # One loop per session, each filtered to a single id, so the line follows `ids` instead of the
+  # name order `#{S:}` walks in. The style goes ahead of the loop: the item it wraps is the only
+  # one that loop draws.
+  line=""
+
+  for (( i = start; i <= last; i++ )); do
+    if [[ "${ids[i]}" = "${current}" ]]; then
+      line+="#[${style_sel}]"
+    else
+      line+="#[${style_fill}]"
+    fi
+
+    line+="#{S:#{?#{==:#{session_id},${ids[i]}},${item},}}"
+  done
+
+  line="${skeleton//%%SESSIONS%%/${line}}"
+}
 
 # One invocation: every command to the server costs a process and a round trip, and this runs on
 # every session switch, resize and window change.
-# `refresh-client` goes last because it redraws what the options above just set, and because it
-# fails when no client is attached, which would stop anything after it. A failing hook script
-# prints an error over the line, hence the silenced stderr.
-tmux set-option -g 'status-format[0]' "${skeleton//%%SESSIONS%%/${sessions}}" \; \
-  set-option -g @sessions-viewport-start "${start}" \; \
-  set-option -g @sessions-hidden-left "$(( start - 1 ))" \; \
-  set-option -g @sessions-hidden-right "$(( count - last ))" \; \
-  refresh-client -S 2>/dev/null
+cmd=()
+
+# The global line is what a session nobody is attached to draws, for the instant between a client
+# attaching and the `client-attached` hook writing that session its own. Width 0 means every
+# session shows, with none of them current.
+fit_line 0 "" 1
+cmd+=(set-option -g 'status-format[0]' "${line}" ';')
+# Nothing is hidden on that line, and the counters fall back to the global when a session has none
+# of its own.
+cmd+=(set-option -g @sessions-hidden-left 0 ';')
+cmd+=(set-option -g @sessions-hidden-right 0 ';')
+
+for sid in "${attached[@]}"; do
+  num="${sid#\$}"
+  fit_line "${client_width[num]}" "${sid}" \
+      "$(tmux show-option -t "${sid}" -qv @sessions-viewport-start)"
+
+  cmd+=(set-option -t "${sid}" 'status-format[0]' "${line}" ';')
+  # The scroll position, kept across runs. Session-scoped like the line: two clients scrolled to
+  # different places would otherwise fight over one number.
+  cmd+=(set-option -t "${sid}" @sessions-viewport-start "${start}" ';')
+  cmd+=(set-option -t "${sid}" @sessions-hidden-left "$(( start - 1 ))" ';')
+  cmd+=(set-option -t "${sid}" @sessions-hidden-right "$(( count - last ))" ';')
+done
+
+# The redraws go after every write, not next to the one they belong to: tmux stops a command
+# sequence at the first failure, and `refresh-client` fails on a client that detached since
+# `list-clients` ran. A failing hook script prints an error over the line, hence the silenced
+# stderr.
+for sid in "${attached[@]}"; do
+  num="${sid#\$}"
+  cmd+=(refresh-client -S -t "${client_tty[num]}" ';')
+done
+
+# Drop the separator after the last command, rather than rely on every supported tmux taking a
+# trailing one.
+unset "cmd[$(( ${#cmd[@]} - 1 ))]"
+
+tmux "${cmd[@]}" 2>/dev/null
 exit 0

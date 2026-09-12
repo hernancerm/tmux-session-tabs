@@ -130,22 +130,28 @@ bind-session-key @session-kill-key "Kill current session" \
 bind-session-key @session-last-key "Select last active session" \
     switch-client -l
 
+# Each script is told which client pressed the key: `run-shell` expands its command with that
+# client in context, and `list-clients` cannot say which of several clients it was.
+
 # Name a session on the status line, and rename the session to match. Empty = cwd on the line, and
 # a number for the name.
 bind-session-key @session-label-key "Label the current session" \
-    command-prompt -I "#{@label}" -p "(label)" "run-shell '${scripts}/tmux-label-session \"%%\"'"
+    command-prompt -I "#{@label}" -p "(label)" \
+    "run-shell '${scripts}/tmux-label-session \"%%\" #{q:session_id}'"
 
 bind-session-key @session-prev-key "Select the previous session" -r \
-    run-shell "${scripts}/tmux-select-session prev"
+    run-shell "${scripts}/tmux-select-session prev \
+#{q:client_tty} #{q:session_id} #{q:client_key_table}"
 
 bind-session-key @session-next-key "Select the next session" -r \
-    run-shell "${scripts}/tmux-select-session next"
+    run-shell "${scripts}/tmux-select-session next \
+#{q:client_tty} #{q:session_id} #{q:client_key_table}"
 
 bind-session-key @session-move-left-key "Move session left" -r \
-    run-shell "${scripts}/tmux-move-session left"
+    run-shell "${scripts}/tmux-move-session left #{q:session_id}"
 
 bind-session-key @session-move-right-key "Move session right" -r \
-    run-shell "${scripts}/tmux-move-session right"
+    run-shell "${scripts}/tmux-move-session right #{q:session_id}"
 
 # Clicks are not configurable: they are bound to the status line itself, not to a key the config
 # could want back.

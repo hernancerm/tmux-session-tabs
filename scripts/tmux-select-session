@@ -4,19 +4,25 @@
 ## `switch-client -p/-n` walks sessions by name, which is not the order the line draws, so the step
 ## goes through `@order` instead. It wraps around the ends, as `switch-client -p/-n` does.
 ## @param:string $1 Direction, either 'prev' or 'next'.
+## @param:string $2 The client tty, $3 its session, $4 its key table. Default to the first client.
 
 direction="${1}"
 
 if [[ "${direction}" != 'prev' && "${direction}" != 'next' ]]; then
-  echo "Usage: $(basename "$0") <prev|next>"
+  echo "Usage: $(basename "$0") <prev|next> [tty session-id key-table]"
   exit 1
 fi
 
-# The client the keys came from, not the session a hook happens to target.
-tty=""
-current=""
-table=""
-read -r tty current table < <(tmux list-clients -F '#{client_tty} #{session_id} #{client_key_table}')
+# The binding passes its own client: with two clients on one server, `list-clients` says nothing
+# about which of them pressed the key.
+tty="${2}"
+current="${3}"
+table="${4}"
+
+if [[ -z "${tty}" ]]; then
+  read -r tty current table \
+      < <(tmux list-clients -F '#{client_tty} #{session_id} #{client_key_table}')
+fi
 
 if [[ -z "${current}" ]]; then
   exit

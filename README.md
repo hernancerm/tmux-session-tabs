@@ -9,7 +9,8 @@ view when they no longer fit the terminal width.
 
 tmux walks sessions in name order (`#{S:}`) and offers no way to reorder them, so the line is not
 written as a static format. `tmux-status-viewport` measures each session, decides which ones fit,
-and writes `status-format[0]` with one single-session loop per tab, in `@order` order.
+and writes `status-format[0]` with one single-session loop per tab, in `@order` order. It writes one
+line per attached session, so each client gets its own width, scroll position and highlight.
 
 It takes over `status-format[0]`, the whole top row, so `status-left`, `status-right` and
 `window-status-format` are never drawn. Those are what a theme plugin sets, so it does not combine
@@ -145,8 +146,9 @@ as soon as one exists. `tmux-select-session` steps through `@order` instead.
 
 ## Known issues
 
-- **Multiple clients on one server.** The scripts size and highlight the line for the first client
-  in `list-clients`. With two terminals attached to the same server, the line follows the wrong one.
+- **Two clients on one session.** `status-format` is a session option and tmux has no per-client
+  one, so clients sharing a session share a line. The narrower one decides how much fits, as tmux
+  does when it sizes a shared session. Clients on different sessions are unaffected.
 
 ## State
 
@@ -156,5 +158,8 @@ The plugin keeps its bookkeeping in tmux options, so it survives a config reload
 | --- | --- | --- |
 | `@order` | session | Position on the line, kept a gapless `1..n` |
 | `@label` | session | The name drawn on the line, empty for the shortened cwd |
-| `@sessions-viewport-start` | global | Index of the first session shown, the scroll position |
-| `@sessions-hidden-left` / `-right` | global | Counts drawn in the `<` and `>` markers |
+| `@sessions-viewport-start` | session | Index of the first session shown, the scroll position |
+| `@sessions-hidden-left` / `-right` | session | Counts drawn in the `<` and `>` markers |
+
+The global `status-format[0]`, and global `0` for both counters, are the fallback a session draws
+until a client attaches to it and the `client-attached` hook writes it its own line.
