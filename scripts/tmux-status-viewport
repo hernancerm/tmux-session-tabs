@@ -7,8 +7,9 @@
 
 item="$(tmux show-option -gqv @session-item)"
 skeleton="$(tmux show-option -gqv @status-skeleton)"
-style="$(tmux show-option -gqv @session-style)"
-style_current="$(tmux show-option -gqv @session-style-current)"
+style_fill="$(tmux show-option -gqv @session-style-fill)"
+style_sel="$(tmux show-option -gqv @session-style-sel)"
+right_length="$(tmux show-option -gqv @session-right-length)"
 
 # The line is drawn for an attached client, so its width and its session are the ones that matter.
 # A hook fires with its own session as the target, which can be one nobody is looking at.
@@ -97,12 +98,16 @@ done
 
 # The first session on the line. Kept across runs: it is the scroll position.
 start="$(tmux show-option -gqv @sessions-viewport-start)"
+# Columns the tabs may use: the client width less what `@session-right` was declared to take.
+room=$(( width - right_length ))
 # Room for the `<` and `>` counters, only needed once something is hidden.
-avail=$(( width - 8 ))
+avail=$(( room - 8 ))
 used=0
 last=0
 
-if (( width <= 0 || total <= width )); then
+# `room <= 0` also covers having no client to measure, and keeps the fit loop below from running
+# with nothing to fill.
+if (( room <= 0 || total <= room )); then
   start=1
   last=${count}
 else
@@ -150,9 +155,9 @@ sessions=""
 
 for (( i = start; i <= last; i++ )); do
   if [[ "${ids[i]}" = "${current}" ]]; then
-    sessions+="#[${style_current}]"
+    sessions+="#[${style_sel}]"
   else
-    sessions+="#[${style}]"
+    sessions+="#[${style_fill}]"
   fi
 
   sessions+="#{S:#{?#{==:#{session_id},${ids[i]}},${item},}}"

@@ -11,7 +11,9 @@ tmux walks sessions in name order (`#{S:}`) and offers no way to reorder them, s
 written as a static format. `tmux-status-viewport` measures each session, decides which ones fit,
 and writes `status-format[0]` with one single-session loop per tab, in `@order` order.
 
-It takes over `status-format[0]`, so it does not combine with other status line themes.
+It takes over `status-format[0]`, the whole top row, so `status-left`, `status-right` and
+`window-status-format` are never drawn. Those are what a theme plugin sets, so it does not combine
+with one. `@session-right` below covers the case those themes are usually wanted for.
 
 ## Install
 
@@ -36,12 +38,46 @@ Set these before the plugin loads. They are only defaulted, so yours win.
 
 | Option | Default | What it does |
 | --- | --- | --- |
-| `@session-style` | `bg=#f0f6fe,fg=#6e7781` | Styles the line, and every session that is not current |
-| `@session-style-current` | `bg=#4689e0,fg=#ffffff` | Styles the current session |
+| `@session-style-fill` | `bg=#f0f6fe,fg=#6e7781` | Styles every session that is not current, and the `<` / `>` markers |
+| `@session-style-sel` | `bg=#4689e0,fg=#ffffff` | Styles the current session |
 | `@session-show-window-index` | `off` | `on` prefixes each window with its index, as `0:nvim` |
+| `@session-right` | empty | Text drawn on the right edge. A format, expanded on every redraw |
+| `@session-right-length` | `0` | Columns the tabs leave free for it |
 
-It also publishes two read-only options, for a config that wants the same text elsewhere. Both hold
-a format, so reading one takes `#{E:...}` to expand it a second time:
+### Right-edge text
+
+`@session-right` holds a format, so what it draws stays live:
+
+```tmux
+set -g @session-right " %H:%M "
+set -g @session-right-length 7
+```
+
+The length is declared rather than measured: measuring means expanding the text on every rebuild, so
+a `#()` in it would run that much more often. Set it too low and the tabs run under the text, too
+high and you lose tab space.
+
+The text carries its own styles, and a style takes no columns, so the length counts only the visible
+characters. Quote it with `'...'`, which stores the `#[...]` as written instead of expanding it at
+config-parse time:
+
+```tmux
+set -g @session-right '#[fg=#ffffff,bg=#d13212,bold] WARN #[fg=#000000,bg=#f5d90a,nobold] 3 '
+set -g @session-right-length 9
+```
+
+`#[default]` in there returns to `status-style`, not to `@session-style-fill`. The plugin leaves
+`status-style` alone, so that is tmux's own green until the config sets it. Setting it also colours
+the gap between the tabs and the text:
+
+```tmux
+set -g status-style "bg=#f0f6fe,fg=#6e7781"
+```
+
+## Published options
+
+The plugin publishes two read-only options, for a config that wants the same text elsewhere. Both
+hold a format, so reading one takes `#{E:...}` to expand it a second time:
 
 ```tmux
 set -g set-titles-string "#{E:@session-dir}"

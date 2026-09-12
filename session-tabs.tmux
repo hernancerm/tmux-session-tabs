@@ -12,22 +12,23 @@ scripts="${plugin}/scripts"
 # OPTIONS
 
 # Styles are only defaulted, so a `.tmux.conf` that sets them before loading the plugin wins.
-if [[ -z "$(tmux show-option -gqv @session-style)" ]]; then
-  tmux set-option -g @session-style "bg=#f0f6fe,fg=#6e7781"
+if [[ -z "$(tmux show-option -gqv @session-style-fill)" ]]; then
+  tmux set-option -g @session-style-fill "bg=#f0f6fe,fg=#6e7781"
 fi
-if [[ -z "$(tmux show-option -gqv @session-style-current)" ]]; then
-  tmux set-option -g @session-style-current "bg=#4689e0,fg=#ffffff"
+if [[ -z "$(tmux show-option -gqv @session-style-sel)" ]]; then
+  tmux set-option -g @session-style-sel "bg=#4689e0,fg=#ffffff"
 fi
 if [[ -z "$(tmux show-option -gqv @session-show-window-index)" ]]; then
   tmux set-option -g @session-show-window-index "off"
 fi
+if [[ -z "$(tmux show-option -gqv @session-right-length)" ]]; then
+  tmux set-option -g @session-right-length "0"
+fi
 
-style="$(tmux show-option -gqv @session-style)"
+style_fill="$(tmux show-option -gqv @session-style-fill)"
 
 
 # STATUS LINE
-
-tmux set-option -g status-style "${style}"
 
 # Pane current path with `$HOME` substituted with `~`.
 SESSION_DIR="#{s|^${HOME}|~|:pane_current_path}"
@@ -63,13 +64,18 @@ ${WINDOW_LIST}#[range=user|#{session_id}])  #[norange]"
 HIDDEN_LEFT="#{?@sessions-hidden-left, <#{@sessions-hidden-left},}"
 HIDDEN_RIGHT="#{?@sessions-hidden-right,#{@sessions-hidden-right}> ,}"
 
+# Free text on the right edge, off by default. `#{E:}` expands the option a second time, so a format
+# put there stays live; the tabs reserve `@session-right-length` columns for it rather than measuring
+# it, which would re-expand it every rebuild and re-run any `#()` it holds.
+RIGHT="#[align=right]#[${style_fill}]#{E:@session-right}"
+
 # `#{S:}` walks sessions sorted by name, so the line cannot order them on its own.
 # `tmux-status-viewport` writes `status-format[0]`: it replaces the placeholder with one loop per
 # session, each filtered to a single session id, which puts them in `@order` order. It measures a
 # session by expanding the item too, to know how many fit.
 tmux set-option -g @session-item "${SESSION_ITEM}"
-tmux set-option -g @status-skeleton "#[align=left]#[${style}]${HIDDEN_LEFT}\
-%%SESSIONS%%#[${style}]${HIDDEN_RIGHT}"
+tmux set-option -g @status-skeleton "#[align=left]#[${style_fill}]${HIDDEN_LEFT}\
+%%SESSIONS%%#[${style_fill}]${HIDDEN_RIGHT}${RIGHT}"
 
 # The cwd label only updates on redraw, so keep this low.
 tmux set-option -g status-interval 1
