@@ -60,7 +60,7 @@ the two and puts it ahead of each loop.
 | Key | Action |
 | --- | --- |
 | `t` | Create a session (overrides "Display a large clock") |
-| `;` | Label the current session (overrides "Select the previously active pane") |
+| `L` | Label the current session (overrides "Switch to the last client") |
 | `w` | Kill the current session (overrides "Choose a window from a list") |
 | `Tab` | Select the last active session |
 | `Up` / `Down` | Select the previous / next session on the line, wrapping at the ends |
@@ -77,7 +77,7 @@ These bindings are not opt-in yet, and several of them override tmux defaults. C
 ## Labels
 
 A session with no label shows its current directory, shortened one char per parent
-(`~/dev/repos/foo` reads `~/d…/r…/foo`). `;` sets a label, and renames the session to match, so
+(`~/dev/repos/foo` reads `~/d…/r…/foo`). `L` sets a label, and renames the session to match, so
 `attach -t`, `switch-client -t` and `choose-tree` use the same word you see on the line. An empty
 label clears both.
 

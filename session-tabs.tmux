@@ -96,11 +96,9 @@ tmux set-option -g detach-on-destroy off
 # (Overrides "Display a large clock").
 tmux bind -N "Create a session" t new-session
 
-# Name a session on the status line, and rename the session to match. Empty = cwd on the line, and
-# a number for the name.
-# (Overrides "Select the previously active pane").
-# `\;` and not `;`: a lone `;` argument reads as a separator between tmux commands.
-tmux bind -N "Label the current session" '\;' command-prompt -I "#{@label}" -p "(label)" \
+# Name a session on the status line, and rename the session to match. Empty = cwd on the line, and a number for the name.
+# (Overrides "Switch to the last client").
+tmux bind -N "Label the current session" L command-prompt -I "#{@label}" -p "(label)" \
     "run-shell '${scripts}/tmux-label-session \"%%\"'"
 
 # Select the last active session.
