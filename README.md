@@ -1,22 +1,70 @@
 # tmux-session-tabs
 
-A tmux status line where sessions are tabs: ordered by hand, labelled, clickable, and scrolled into
-view when they no longer fit the terminal width.
+Display tmux sessions as tabs in the status line.
 
-```
- <1   ~/d…/r…/nvim(1:zsh* 2:make)    api(1:server* 2:logs 3:zsh)    ~/notes(1:zsh*)   2>
-```
+Target audience: People who use tmux locally and want to see sessions at a glance.
 
-tmux walks sessions in name order (`#{S:}`) and offers no way to reorder them, so the line is not
-written as a static format. `tmux-status-viewport` measures each session, decides which ones fit,
-and writes `status-format[0]` with one single-session loop per tab, in `@order` order. It writes one
-line per attached session, so each client gets its own width, scroll position and highlight.
+## Problem
 
-It takes over `status-format[0]`, the whole top row, so `status-left`, `status-right` and
-`window-status-format` are never drawn. Those are what a theme plugin sets, so it does not combine
-with one. `@session-right` below covers the case those themes are usually wanted for.
+I like using the tabs and split wins provided by terminal emulators themselves. However, I have two
+problems with this multi-term/splits approach that motivate this plugin, tmux-session-tabs:
 
-## Install
+1. Terminal emulators can be "portable", but none I've come across is portable enough.
+   - By "portable" I mean that the same multi-term/splits setup, including keybinds and features,
+     works across OSs and with ok performance. In this sense, I've found tmux to be more portable
+     than any single terminal emulator.
+2. Terminal emulators do not allow to mix split wins and fullscreen wins in the same tab scope.
+   - Let's say I'm working on a web dev project. In my head, a tab holds a project, so the tab holds
+     my editor, and perhaps a split win for an AI harness. I then want to start the server. I want
+     the win for that to be scoped to the same project, so to the same tab. The terminal emulators
+     I've tried cannot represent this structure, and even if one exists that can, it still has
+     problem number 1. tmux can represent this with sessions as "tabs".
+
+## Solution
+
+Display tmux sessions as tabs in the status line. The sessions _feel_ like tabs:
+
+- The tabs can be manually ordered.
+- Closing a session does not detach the client (`set-option -g detach-on-destroy off`).
+- Tabs display the abbreviated cwd, and tabs may be manually labeled overriding the cwd auto-label.
+
+tmux itself solves problem number 1, and this plugin solves problem number 2.
+
+## Features
+
+- Display tmux sessions as tabs in the status line.
+- Expose options to set key binds for plugin actions, e.g., re-order tabs.
+- In the status line, each session is auto-labeled with the abbreviated cwd (the "project name").
+- Optionally, sessions can be manually labeled. This does `rename-session` and reflects it in the
+  status line.
+- Optionally, add arbitrary text on the right edge of the status line.
+- Gracefully handle overflow with `<`/`>` markers in the status line.
+- Support mouse to focus or close session or win.
+- Partially support multiple clients.
+- Closing sessions does not detach the client.
+- Configure the status line colors.
+- Status line survives a config reload.
+
+## Limitations
+
+- Multiple clients.
+  - When 2 clients are in the same session, the width of the smallest client is used to draw the
+    status line in both clients, so the larger client "shrinks". tmux does not support client-side
+    options, so each status line is scoped to each session instead of each client.
+- Themes compatibility.
+  - Catpuccin and other themes do not play well with this plugin, because both use
+     `status-format[0]`.
+- Session names.
+  - Sessions are automatically named with an integer, so `tmux ls` and any other command that
+    exposes the real session names outputs meaningless names. This limitation does not apply when
+    [labelling sessions](#labels), it only applies when using the default cwd auto-labeling.
+
+## Requirements
+
+- bash >=3.2 (macOS out-of-the-box satisfies this.)
+- tmux >=3.2
+
+## Installation
 
 With [TPM](https://github.com/tmux-plugins/tpm):
 
@@ -24,52 +72,82 @@ With [TPM](https://github.com/tmux-plugins/tpm):
 set -g @plugin 'tmux-session-tabs'
 ```
 
-Manually:
+Or, manually:
 
 ```tmux
 run-shell ~/path/to/tmux-session-tabs/session-tabs.tmux
 ```
 
-Requires `bash` 3.2 or newer, the version macOS ships, and tmux 3.2 or newer (`status-format`,
-`#{S:}`, `list-sessions -f`).
+Finally, set [keybinds](#keybinds).
 
-## Options
+## Keybinds
 
-Set these before the plugin loads. They are only defaulted, so yours win.
+
+**The plugin binds no key on its own.**
+
+Set these options to the keys you want before the plugin loads:
+
+```text
+set -g @session-new-key "t"             # Create session.
+set -g @session-kill-key "w"            # Kill the current session, with confirmation.
+set -g @session-last-key "Tab"          # Focus the last active session.
+set -g @session-label-key "L"           # Label the current session.
+set -g @session-prev-key "Up"           # Select left session.
+set -g @session-next-key "Down"         # Select right session.
+set -g @session-move-left-key "Left"    # Move current session left.
+set -g @session-move-right-key "Right"  # Move current session right.
+```
+
+Repeatable without prefix (`-r` behavior):
+
+- `@session-prev-key`
+- `@session-next-key`
+- `@session-move-left-key`
+- `@session-move-right-key`
+
+Non-configurable mouse key binds for the status line:
+
+| Mouse | Action |
+| --- | --- |
+| Middle click | Kill the clicked session or win, with confirmation. |
+| Left click | Focus the clicked session or window. |
+
+## Style
+
+To change the status line colors, set these options:
 
 | Option | Default | What it does |
 | --- | --- | --- |
-| `@session-style-fill` | `bg=#f0f6fe,fg=#6e7781` | Styles every session that is not current, and the `<` / `>` markers |
-| `@session-style-sel` | `bg=#4689e0,fg=#ffffff` | Styles the current session |
-| `@session-show-window-index` | `off` | `on` prefixes each window with its index, as `0:nvim` |
-| `@session-right` | empty | Text drawn on the right edge. A format, expanded on every redraw |
-| `@session-right-length` | `0` | Columns the tabs leave free for it |
+| `@session-style-sel` | `bg=#4689e0,fg=#ffffff` | Styles the current session. |
+| `@session-style-fill` | `bg=#f0f6fe,fg=#6e7781` | Styles every non-current session. |
+| `@session-show-window-index` | `off` | `on` prefixes each window with its index, as `0:zsh` |
+| `@session-right` | empty | Text drawn on the right edge. |
+| `@session-right-length` | `0` | Columns for right-edge text. |
 
-### Right-edge text
+## Right-edge text
 
-`@session-right` holds a format, so what it draws stays live:
+The tabs are left-aligned. On the right edge, text can be displayed via `@session-right`. It holds a
+format. Example:
 
 ```tmux
 set -g @session-right " %H:%M "
 set -g @session-right-length 7
 ```
 
-The length is declared rather than measured: measuring means expanding the text on every rebuild, so
-a `#()` in it would run that much more often. Set it too low and the tabs run under the text, too
-high and you lose tab space.
+The option `@session-right-length` is the columns reserved for the right-edge text.
 
-The text carries its own styles, and a style takes no columns, so the length counts only the visible
-characters. Quote it with `'...'`, which stores the `#[...]` as written instead of expanding it at
-config-parse time:
+Since the right-edge text is a format, it can be styled. Example:
 
 ```tmux
 set -g @session-right '#[fg=#ffffff,bg=#d13212,bold] WARN #[fg=#000000,bg=#f5d90a,nobold] 3 '
 set -g @session-right-length 9
 ```
 
-`#[default]` in there returns to `status-style`, not to `@session-style-fill`. The plugin leaves
-`status-style` alone, so that is tmux's own green until the config sets it. Setting it also colours
-the gap between the tabs and the text:
+TODO: Should this plugin set `status-style`?
+
+In the right-edge text, `#[default]` returns to `status-style`, not to `@session-style-fill`. The
+plugin leaves `status-style` alone, so that is tmux's own green until the config sets it. Setting it
+also colours the gap between the tabs and the text:
 
 ```tmux
 set -g status-style "bg=#f0f6fe,fg=#6e7781"
@@ -84,6 +162,8 @@ hold a format, so reading one takes `#{E:...}` to expand it a second time:
 set -g set-titles-string "#{E:@session-dir}"
 ```
 
+TODO: Both of these opts needed?
+
 | Option | Holds |
 | --- | --- |
 | `@session-dir` | The current directory, with `$HOME` as `~` |
@@ -93,73 +173,26 @@ A style cannot be written inside a `#{?...}` format instead: the comma in `bg=..
 read as the separator between the branches of the conditional. That is why the script picks one of
 the two and puts it ahead of each loop.
 
-## Keys
-
-**The plugin binds no key on its own: every key worth binding here already means something in tmux,
-so the choice is left to your config. Set these before the plugin loads. An unset option binds
-nothing.**
-
-| Option | Action |
-| --- | --- |
-| `@session-new-key` | Create a session |
-| `@session-kill-key` | Kill the current session, after a confirmation |
-| `@session-last-key` | Select the last active session |
-| `@session-label-key` | Label the current session |
-| `@session-prev-key` / `@session-next-key` | Select the previous / next session on the line, wrapping at the ends |
-| `@session-move-left-key` / `@session-move-right-key` | Move the current session left / right on the line, stopping at the ends |
-
-The four that walk the line are bound with `-r`, so they repeat without the prefix.
-
-A suggestion, the set this was written with. Each one takes over a tmux default, named on the right:
-
-```tmux
-set -g @session-new-key "t"                # Display a large clock
-set -g @session-kill-key "w"               # Choose a window from a list
-set -g @session-last-key "Tab"             # Popup pane, where tmux has one
-set -g @session-label-key "L"              # Switch to the last client
-set -g @session-prev-key "Up"              # Select the pane above
-set -g @session-next-key "Down"            # Select the pane below
-set -g @session-move-left-key "Left"       # Select the pane to the left
-set -g @session-move-right-key "Right"     # Select the pane to the right
-```
-
-The mouse is not configurable: these are bound to the status line, not to a key you could want back.
-
-| Mouse | Action |
-| --- | --- |
-| left click | Focus the clicked session or window |
-| middle click | Kill the clicked session or window, after a confirmation |
-
-The plugin also sets `detach-on-destroy off`: killing the session the client sits on would otherwise
-detach it and end tmux, instead of sending the client to the next session.
-
 ## Labels
 
-A session with no label shows its current directory, shortened one char per parent
-(`~/dev/repos/foo` reads `~/d…/r…/foo`). `L` sets a label, and renames the session to match, so
-`attach -t`, `switch-client -t` and `choose-tree` use the same word you see on the line. An empty
-label clears both.
+A session with no label shows its abbreviated cwd, e.g. `~/dev/repos/foo` as `~/d…/r…/foo`. However,
+the actual session's name is a meaningless integer. So these do not show the same text as the status
+line:
 
-Selection follows the line, not tmux's own session order: `switch-client -p/-n` walks sessions by
-name, so a session named `0` by `C-b t` sits before every labelled one, and the two orders disagree
-as soon as one exists. `tmux-select-session` steps through `@order` instead.
+- `attach -t`
+- `switch-client -t`
+- `choose-tree`
 
-## Known issues
-
-- **Two clients on one session.** `status-format` is a session option and tmux has no per-client
-  one, so clients sharing a session share a line. The narrower one decides how much fits, as tmux
-  does when it sizes a shared session. Clients on different sessions are unaffected.
+`@session-label-key` sets a label and renames the session to match, making both parts agree. Use
+this only when wanting an explicit label for a session. See [Keybinds](#keybinds).
 
 ## State
 
-The plugin keeps its bookkeeping in tmux options, so it survives a config reload:
+The status line survives a config reload by stiring its state in tmux options:
 
 | Option | Scope | Meaning |
 | --- | --- | --- |
-| `@order` | session | Position on the line, kept a gapless `1..n` |
-| `@label` | session | The name drawn on the line, empty for the shortened cwd |
-| `@sessions-viewport-start` | session | Index of the first session shown, the scroll position |
-| `@sessions-hidden-left` / `-right` | session | Counts drawn in the `<` and `>` markers |
-
-The global `status-format[0]`, and global `0` for both counters, are the fallback a session draws
-until a client attaches to it and the `client-attached` hook writes it its own line.
+| `@order` | session | Position on the status line, kept a gapless `1..n`. |
+| `@label` | session | The name drawn on the line, empty for the shortened cwd. |
+| `@sessions-viewport-start` | session | Index of the first session shown, the scroll position. |
+| `@sessions-hidden-left` / `-right` | session | Counts drawn in the `<` and `>` markers. |
