@@ -57,22 +57,43 @@ the two and puts it ahead of each loop.
 
 ## Keys
 
-| Key | Action |
+**The plugin binds no key on its own: every key worth binding here already means something in tmux,
+so the choice is left to your config. Set these before the plugin loads. An unset option binds
+nothing.**
+
+| Option | Action |
 | --- | --- |
-| `t` | Create a session (overrides "Display a large clock") |
-| `L` | Label the current session (overrides "Switch to the last client") |
-| `w` | Kill the current session (overrides "Choose a window from a list") |
-| `Tab` | Select the last active session |
-| `Up` / `Down` | Select the previous / next session on the line, wrapping at the ends |
-| `Left` / `Right` | Move the current session left / right on the line, stopping at the ends |
+| `@session-new-key` | Create a session |
+| `@session-kill-key` | Kill the current session, after a confirmation |
+| `@session-last-key` | Select the last active session |
+| `@session-label-key` | Label the current session |
+| `@session-prev-key` / `@session-next-key` | Select the previous / next session on the line, wrapping at the ends |
+| `@session-move-left-key` / `@session-move-right-key` | Move the current session left / right on the line, stopping at the ends |
+
+The four that walk the line are bound with `-r`, so they repeat without the prefix.
+
+A suggestion, the set this was written with. Each one takes over a tmux default, named on the right:
+
+```tmux
+set -g @session-new-key "t"                # Display a large clock
+set -g @session-kill-key "w"               # Choose a window from a list
+set -g @session-last-key "Tab"             # Popup pane, where tmux has one
+set -g @session-label-key "L"              # Switch to the last client
+set -g @session-prev-key "Up"              # Select the pane above
+set -g @session-next-key "Down"            # Select the pane below
+set -g @session-move-left-key "Left"       # Select the pane to the left
+set -g @session-move-right-key "Right"     # Select the pane to the right
+```
+
+The mouse is not configurable: these are bound to the status line, not to a key you could want back.
+
+| Mouse | Action |
+| --- | --- |
 | left click | Focus the clicked session or window |
 | middle click | Kill the clicked session or window, after a confirmation |
 
 The plugin also sets `detach-on-destroy off`: killing the session the client sits on would otherwise
 detach it and end tmux, instead of sending the client to the next session.
-
-These bindings are not opt-in yet, and several of them override tmux defaults. Comment them out in
-`session-tabs.tmux` if they clash.
 
 ## Labels
 

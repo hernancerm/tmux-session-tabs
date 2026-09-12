@@ -93,23 +93,56 @@ done
 # most recently used session instead, and only detaches once no session is left.
 tmux set-option -g detach-on-destroy off
 
-# (Overrides "Display a large clock").
-tmux bind -N "Create a session" t new-session
+# Keys are opt-in: every key worth binding here already means something in tmux, so the plugin
+# picks none and leaves the choice to the config. `README.md` suggests a set. An unset option
+# binds nothing.
+#   bind-session-key <option> <description> [-r] <tmux-command>...
+bind-session-key() {
+  typeset option="$1" note="$2"
+  shift 2
 
-# Name a session on the status line, and rename the session to match. Empty = cwd on the line, and a number for the name.
-# (Overrides "Switch to the last client").
-tmux bind -N "Label the current session" L command-prompt -I "#{@label}" -p "(label)" \
-    "run-shell '${scripts}/tmux-label-session \"%%\"'"
+  typeset -a flags
+  if [[ "$1" == "-r" ]]; then
+    flags=(-r)
+    shift
+  fi
 
-# Select the last active session.
-tmux bind -N "Select last active session" Tab switch-client -l
+  typeset key="$(tmux show-option -gqv "${option}")"
+  if [[ -z "${key}" ]]; then
+    return
+  fi
 
-# Select and move sessions on the status line.
-# (Overrides selecting the pane in a direction).
-tmux bind -N "Select the previous session" -r Up run-shell "${scripts}/tmux-select-session prev"
-tmux bind -N "Select the next session" -r Down run-shell "${scripts}/tmux-select-session next"
-tmux bind -N "Move session left" -r Left run-shell "${scripts}/tmux-move-session left"
-tmux bind -N "Move session right" -r Right run-shell "${scripts}/tmux-move-session right"
+  tmux bind -N "${note}" "${flags[@]}" "${key}" "$@"
+}
+
+bind-session-key @session-new-key "Create a session" \
+    new-session
+
+bind-session-key @session-kill-key "Kill current session" \
+    confirm-before kill-session
+
+bind-session-key @session-last-key "Select last active session" \
+    switch-client -l
+
+# Name a session on the status line, and rename the session to match. Empty = cwd on the line, and
+# a number for the name.
+bind-session-key @session-label-key "Label the current session" \
+    command-prompt -I "#{@label}" -p "(label)" "run-shell '${scripts}/tmux-label-session \"%%\"'"
+
+bind-session-key @session-prev-key "Select the previous session" -r \
+    run-shell "${scripts}/tmux-select-session prev"
+
+bind-session-key @session-next-key "Select the next session" -r \
+    run-shell "${scripts}/tmux-select-session next"
+
+bind-session-key @session-move-left-key "Move session left" -r \
+    run-shell "${scripts}/tmux-move-session left"
+
+bind-session-key @session-move-right-key "Move session right" -r \
+    run-shell "${scripts}/tmux-move-session right"
+
+# Clicks are not configurable: they are bound to the status line itself, not to a key the config
+# could want back.
 
 # Click a session or one of its windows in the status line to focus it. The whole command sits in
 # the `run-shell` argument, the only part expanded with the mouse in context (`-t` takes its
@@ -120,10 +153,6 @@ tmux bind -n MouseDown1Status run-shell \
 # Middle click to kill session/window. The inner quotes stay single: the range holds a session id
 # like `$3`, which a double-quoted shell string would expand away.
 tmux bind -n MouseDown2Status run-shell "#{?mouse_status_range,tmux confirm-before -t #{q:client_tty} -p 'Kill #{mouse_status_range}? (y/n)' '#{?#{m:*:*,#{mouse_status_range}},kill-window,kill-session} -t #{mouse_status_range}',true}"
-
-# Kill the current session.
-# (Overrides "Choose a window from a list").
-tmux bind -N "Kill current session" w confirm-before kill-session
 
 
 # Runs last: it measures sessions with the format just defined.
