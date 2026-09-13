@@ -27,6 +27,15 @@ fi
 
 style_fill="$(tmux show-option -gqv @session-style-fill)"
 
+# What the tabs leave empty (the gap before `@session-right`) is painted with `status-style`, a
+# global the config or a theme owns. `fill=` paints the line here instead, so the plugin looks
+# right out of the box without setting that global. See `fill=colour` in tmux(1), STYLES.
+style_gap=""
+fill_bg="${style_fill#*bg=}"
+if [[ "${fill_bg}" != "${style_fill}" ]]; then
+  style_gap="#[fill=${fill_bg%%,*}]"
+fi
+
 
 # STATUS LINE
 
@@ -74,7 +83,7 @@ RIGHT="#[align=right]#[${style_fill}]#{E:@session-right}"
 # session, each filtered to a single session id, which puts them in `@order` order. It measures a
 # session by expanding the item too, to know how many fit.
 tmux set-option -g @session-item "${SESSION_ITEM}"
-tmux set-option -g @status-skeleton "#[align=left]#[${style_fill}]${HIDDEN_LEFT}\
+tmux set-option -g @status-skeleton "${style_gap}#[align=left]#[${style_fill}]${HIDDEN_LEFT}\
 %%SESSIONS%%#[${style_fill}]${HIDDEN_RIGHT}${RIGHT}"
 
 # The cwd label only updates on redraw, so keep this low.

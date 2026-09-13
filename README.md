@@ -11,14 +11,14 @@ problems with this multi-term/splits approach that motivate this plugin, tmux-se
 
 1. Terminal emulators can be "portable", but none I've come across is portable enough.
    - By "portable" I mean that the same multi-term/splits setup, including keybinds and features,
-     works across OSs and with ok performance. In this sense, I've found tmux to be more portable
-     than any single terminal emulator.
+     works across OSs, has ok performance, and is reasonably available in most working environments.
+     In this sense, I've found tmux to be more portable than any single terminal emulator.
 2. Terminal emulators do not allow to mix split wins and fullscreen wins in the same tab scope.
-   - Let's say I'm working on a web dev project. In my head, a tab holds a project, so the tab holds
-     my editor, and perhaps a split win for an AI harness. I then want to start the server. I want
-     the win for that to be scoped to the same project, so to the same tab. The terminal emulators
-     I've tried cannot represent this structure, and even if one exists that can, it still has
-     problem number 1. tmux can represent this with sessions as "tabs".
+   - Let's say I'm working on a web project. In my head, a tab holds a project, so the tab holds
+     my editor, and perhaps a split win. I then want to start the server. I want the win for that to
+     be scoped to the same project, so to the same tab. The terminals I've used cannot represent
+     this structure, and even if one can, it still may have the first problem. tmux can represent
+     this with sessions as "tabs".
 
 ## Solution
 
@@ -143,15 +143,12 @@ set -g @session-right '#[fg=#ffffff,bg=#d13212,bold] WARN #[fg=#000000,bg=#f5d90
 set -g @session-right-length 9
 ```
 
-TODO: Should this plugin set `status-style`?
+The gap between the tabs and the right-edge text is painted with the background of
+`@session-style-fill`, so no theme setup is needed. The plugin does not set `status-style`: that
+option belongs to the config or a theme.
 
-In the right-edge text, `#[default]` returns to `status-style`, not to `@session-style-fill`. The
-plugin leaves `status-style` alone, so that is tmux's own green until the config sets it. Setting it
-also colours the gap between the tabs and the text:
-
-```tmux
-set -g status-style "bg=#f0f6fe,fg=#6e7781"
-```
+One consequence: in the right-edge text, `#[default]` returns to `status-style`, not to
+`@session-style-fill`. Set an explicit style instead of relying on `#[default]`.
 
 ## Published options
 
