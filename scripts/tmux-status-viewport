@@ -9,7 +9,7 @@ item="$(tmux show-option -gqv @session-item)"
 skeleton="$(tmux show-option -gqv @status-skeleton)"
 style_fill="$(tmux show-option -gqv @session-style-fill)"
 style_sel="$(tmux show-option -gqv @session-style-sel)"
-right_length="$(tmux show-option -gqv @session-right-length)"
+right_width="$(tmux show-option -gqv @session-right-text-width)"
 
 # `was`, `measured`, `client_width` and `client_tty` are keyed by the number in the session id
 # (`$3` -> 3): bash 3.2, the one macOS ships, has no associative arrays, and a session id is
@@ -121,8 +121,8 @@ fit_line() {
     fi
   done
 
-  # Columns the tabs may use: the client width less what `@session-right` was declared to take.
-  room=$(( width - right_length ))
+  # Columns the tabs may use: the client width less what `@session-right-text` was declared to take.
+  room=$(( width - right_width ))
   # Room for the `<` and `>` counters, only needed once something is hidden.
   avail=$(( room - 8 ))
   start="$3"

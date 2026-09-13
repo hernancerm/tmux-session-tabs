@@ -21,13 +21,13 @@ fi
 if [[ -z "$(tmux show-option -gqv @session-show-window-index)" ]]; then
   tmux set-option -g @session-show-window-index "off"
 fi
-if [[ -z "$(tmux show-option -gqv @session-right-length)" ]]; then
-  tmux set-option -g @session-right-length "0"
+if [[ -z "$(tmux show-option -gqv @session-right-text-width)" ]]; then
+  tmux set-option -g @session-right-text-width "0"
 fi
 
 style_fill="$(tmux show-option -gqv @session-style-fill)"
 
-# What the tabs leave empty (the gap before `@session-right`) is painted with `status-style`, a
+# What the tabs leave empty (the gap before `@session-right-text`) is painted with `status-style`, a
 # global the config or a theme owns. `fill=` paints the line here instead, so the plugin looks
 # right out of the box without setting that global. See `fill=colour` in tmux(1), STYLES.
 style_gap=""
@@ -74,9 +74,9 @@ HIDDEN_LEFT="#{?@sessions-hidden-left, <#{@sessions-hidden-left},}"
 HIDDEN_RIGHT="#{?@sessions-hidden-right,#{@sessions-hidden-right}> ,}"
 
 # Free text on the right edge, off by default. `#{E:}` expands the option a second time, so a format
-# put there stays live; the tabs reserve `@session-right-length` columns for it rather than measuring
-# it, which would re-expand it every rebuild and re-run any `#()` it holds.
-RIGHT="#[align=right]#[${style_fill}]#{E:@session-right}"
+# put there stays live; the tabs reserve `@session-right-text-width` columns for it rather than
+# measuring it, which would re-expand it every rebuild and re-run any `#()` it holds.
+RIGHT="#[align=right]#[${style_fill}]#{E:@session-right-text}"
 
 # `#{S:}` walks sessions sorted by name, so the line cannot order them on its own.
 # `tmux-status-viewport` writes `status-format[0]`: it replaces the placeholder with one loop per

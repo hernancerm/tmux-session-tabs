@@ -121,26 +121,26 @@ To change the status line colors, set these options:
 | `@session-style-sel` | `bg=#4689e0,fg=#ffffff` | Styles the current session. |
 | `@session-style-fill` | `bg=#f0f6fe,fg=#6e7781` | Styles every non-current session. |
 | `@session-show-window-index` | `off` | `on` prefixes each window with its index, as `0:zsh` |
-| `@session-right` | empty | Text drawn on the right edge. |
-| `@session-right-length` | `0` | Columns for right-edge text. |
+| `@session-right-text` | empty | Text drawn on the right edge of the status line. |
+| `@session-right-text-width` | `0` | Columns reserved for `@session-right-text`. |
 
 ## Right-edge text
 
-The tabs are left-aligned. On the right edge, text can be displayed via `@session-right`. It holds a
-format. Example:
+The tabs are left-aligned. On the right edge, text can be displayed via `@session-right-text`. It
+holds a format. Example:
 
 ```tmux
-set -g @session-right " %H:%M "
-set -g @session-right-length 7
+set -g @session-right-text " %H:%M "
+set -g @session-right-text-width 7
 ```
 
-The option `@session-right-length` is the columns reserved for the right-edge text.
+The option `@session-right-text-width` is the columns reserved for the right-edge text.
 
 Since the right-edge text is a format, it can be styled. Example:
 
 ```tmux
-set -g @session-right '#[fg=#ffffff,bg=#d13212,bold] WARN #[fg=#000000,bg=#f5d90a,nobold] 3 '
-set -g @session-right-length 9
+set -g @session-right-text '#[fg=#ffffff,bg=#d13212,bold] WARN #[fg=#000000,bg=#f5d90a,nobold] 3 '
+set -g @session-right-text-width 9
 ```
 
 A conditional in the right-edge text cannot hold a comma: `#{?...}` reads it as the separator
@@ -148,10 +148,10 @@ between its branches, so `bg=...,fg=...` is cut in half. Write one `#[...]` per 
 
 ```tmux
 # Broken:
-set -g @session-right '#{?client_prefix,#[bg=#d13212,fg=#ffffff] PFX ,}'
+set -g @session-right-text '#{?client_prefix,#[bg=#d13212,fg=#ffffff] PFX ,}'
 
 # Works:
-set -g @session-right '#{?client_prefix,#[bg=#d13212]#[fg=#ffffff] PFX ,}'
+set -g @session-right-text '#{?client_prefix,#[bg=#d13212]#[fg=#ffffff] PFX ,}'
 ```
 
 The gap between the tabs and the right-edge text is painted with the background of
