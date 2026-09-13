@@ -18,8 +18,8 @@ fi
 if [[ -z "$(tmux show-option -gqv @session-style-sel)" ]]; then
   tmux set-option -g @session-style-sel "bg=#4689e0,fg=#ffffff"
 fi
-if [[ -z "$(tmux show-option -gqv @session-show-window-index)" ]]; then
-  tmux set-option -g @session-show-window-index "off"
+if [[ -z "$(tmux show-option -gqv @session-show-win-index)" ]]; then
+  tmux set-option -g @session-show-win-index "off"
 fi
 if [[ -z "$(tmux show-option -gqv @session-right-text-width)" ]]; then
   tmux set-option -g @session-right-text-width "0"
@@ -59,7 +59,7 @@ tmux set-option -g @session-label "${SESSION_LABEL}"
 # The index prefix is off by default: it costs 2+ chars per window, and the line overflows sooner.
 # Turn it on to tell apart two windows that share a name.
 WINDOW_INDEX=""
-if [[ "$(tmux show-option -gqv @session-show-window-index)" == "on" ]]; then
+if [[ "$(tmux show-option -gqv @session-show-win-index)" == "on" ]]; then
   WINDOW_INDEX="#{window_index}:"
 fi
 

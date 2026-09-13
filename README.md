@@ -122,9 +122,9 @@ To change the status line colors, set these options:
 | --- | --- | --- |
 | `@session-style-sel` | `bg=#4689e0,fg=#ffffff` | Styles the current session. |
 | `@session-style-fill` | `bg=#f0f6fe,fg=#6e7781` | Styles every non-current session. |
-| `@session-show-window-index` | `off` | `on` prefixes each window with its index, as `0:zsh` |
 | `@session-right-text` | empty | Text drawn on the right edge of the status line. |
 | `@session-right-text-width` | `0` | Columns reserved for `@session-right-text`. |
+| `@session-show-win-index` | `off` | `on` prefixes each win with its index, as `0:zsh`. |
 
 ## Right-edge text
 
