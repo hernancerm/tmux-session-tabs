@@ -143,6 +143,17 @@ set -g @session-right '#[fg=#ffffff,bg=#d13212,bold] WARN #[fg=#000000,bg=#f5d90
 set -g @session-right-length 9
 ```
 
+A conditional in the right-edge text cannot hold a comma: `#{?...}` reads it as the separator
+between its branches, so `bg=...,fg=...` is cut in half. Write one `#[...]` per attribute. Example:
+
+```tmux
+# Broken:
+set -g @session-right '#{?client_prefix,#[bg=#d13212,fg=#ffffff] PFX ,}'
+
+# Works:
+set -g @session-right '#{?client_prefix,#[bg=#d13212]#[fg=#ffffff] PFX ,}'
+```
+
 The gap between the tabs and the right-edge text is painted with the background of
 `@session-style-fill`, so no theme setup is needed. The plugin does not set `status-style`: that
 option belongs to the config or a theme.
@@ -150,25 +161,21 @@ option belongs to the config or a theme.
 One consequence: in the right-edge text, `#[default]` returns to `status-style`, not to
 `@session-style-fill`. Set an explicit style instead of relying on `#[default]`.
 
-## Published options
+## Instrospection
 
-The plugin publishes two read-only options, for a config that wants the same text elsewhere. Both
-hold a format, so reading one takes `#{E:...}` to expand it a second time:
+The plugin publishes two read-only options, for a config that wants the same text elsewhere:
+
+
+| Option | Holds |
+| --- | --- |
+| `@session-dir` | The cwd, with `$HOME` as `~`. |
+| `@session-label` | What the tab displays: the label or the abbreviated cwd. |
+
+Both hold a format, so reading one takes `#{E:...}` to expand it. Example:
 
 ```tmux
 set -g set-titles-string "#{E:@session-dir}"
 ```
-
-TODO: Both of these opts needed?
-
-| Option | Holds |
-| --- | --- |
-| `@session-dir` | The current directory, with `$HOME` as `~` |
-| `@session-label` | What the tab draws: the label, or the shortened directory |
-
-A style cannot be written inside a `#{?...}` format instead: the comma in `bg=...,fg=...` would
-read as the separator between the branches of the conditional. That is why the script picks one of
-the two and puts it ahead of each loop.
 
 ## Labels
 

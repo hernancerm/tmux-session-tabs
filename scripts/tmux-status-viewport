@@ -174,7 +174,9 @@ fit_line() {
 
   # One loop per session, each filtered to a single id, so the line follows `ids` instead of the
   # name order `#{S:}` walks in. The style goes ahead of the loop: the item it wraps is the only
-  # one that loop draws.
+  # one that loop draws. Picking it here, rather than with a `#{?...}` in the format, is what the
+  # comma in `bg=...,fg=...` forces: a format would read it as the separator between the branches
+  # of the conditional.
   line=""
 
   for (( i = start; i <= last; i++ )); do
