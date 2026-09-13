@@ -141,12 +141,13 @@ The option `@session-right-text-width` is the columns reserved for the right-edg
 Since the right-edge text is a format, it can be styled. Example:
 
 ```tmux
-set -g @session-right-text '#[fg=#ffffff,bg=#d13212,bold] WARN #[fg=#000000,bg=#f5d90a,nobold] 3 '
-set -g @session-right-text-width 9
+set -g @session-right-text '#[fg=#ffffff,bg=#d13212,bold] WARN #[fg=#000000,bg=#f5d90a,nobold]'
+set -g @session-right-text-width 6
 ```
 
-A conditional in the right-edge text cannot hold a comma: `#{?...}` reads it as the separator
-between its branches, so `bg=...,fg=...` is cut in half. Write one `#[...]` per attribute. Example:
+A conditional, `#{?...}`, in the right-edge text cannot hold a comma: `#{?...}` reads it as the
+separator between its branches, so `bg=...,fg=...` is cut in half. Write one `#[...]` per attribute.
+Example:
 
 ```tmux
 # Broken:
