@@ -4,6 +4,8 @@ Display tmux sessions as tabs in the status line.
 
 Target audience: People who use tmux locally and want to see sessions at a glance.
 
+**Set your own keybinds after installation, see example keybinds in [Keybinds](#keybinds).**
+
 ## Problem
 
 I like using the tabs and split wins provided by terminal emulators themselves. However, I have two
@@ -52,7 +54,7 @@ tmux itself solves problem number 1, and this plugin solves problem number 2.
     status line in both clients, so the larger client "shrinks". tmux does not support client-side
     options, so each status line is scoped to each session instead of each client.
 - Themes compatibility.
-  - Catpuccin and other themes do not play well with this plugin, because both use
+  - Catppuccin and other themes do not play well with this plugin, because both use
      `status-format[0]`.
 - Session names.
   - Sessions are automatically named with an integer, so `tmux ls` and any other command that
@@ -69,7 +71,7 @@ tmux itself solves problem number 1, and this plugin solves problem number 2.
 With [TPM](https://github.com/tmux-plugins/tpm):
 
 ```tmux
-set -g @plugin 'tmux-session-tabs'
+set -g @plugin 'hernancerm/tmux-session-tabs'
 ```
 
 Or, manually:
@@ -161,7 +163,7 @@ option belongs to the config or a theme.
 One consequence: in the right-edge text, `#[default]` returns to `status-style`, not to
 `@session-style-fill`. Set an explicit style instead of relying on `#[default]`.
 
-## Instrospection
+## Introspection
 
 The plugin publishes two read-only options, for a config that wants the same text elsewhere:
 
@@ -192,7 +194,7 @@ this only when wanting an explicit label for a session. See [Keybinds](#keybinds
 
 ## State
 
-The status line survives a config reload by stiring its state in tmux options:
+The status line survives a config reload by storing its state in tmux options:
 
 | Option | Scope | Meaning |
 | --- | --- | --- |
