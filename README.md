@@ -8,29 +8,17 @@ Target audience: People who use tmux locally and want to see sessions at a glanc
 
 ## Problem
 
-I like using the tabs and split wins provided by terminal emulators themselves. However, I have two
-problems with this multi-term/splits approach that motivate this plugin, tmux-session-tabs:
-
-1. Terminal emulators can be "portable", but none I've come across is portable enough.
-   - By "portable" I mean that the same multi-term/splits setup, including keybinds and features,
-     works across OSs, has ok performance, and is reasonably available in most working environments.
-     In this sense, I've found tmux to be more portable than any single terminal emulator.
-2. Terminal emulators do not allow to mix split wins and fullscreen wins in the same tab scope.
-   - Let's say I'm working on a web project. In my head, a tab holds a project, so the tab holds
-     my editor, and perhaps a split win. I then want to start the server. I want the win for that to
-     be scoped to the same project, so to the same tab. The terminals I've used cannot represent
-     this structure, and even if one can, it still may have the first problem. tmux can represent
-     this with sessions as "tabs".
+I want to group terminals by project, where each project is the cwd. I do not want to have to
+manually name tmux sessions, and I want to see my "open projects" at a glance at all times. In other
+words, I want tmux to feel more like a terminal emulator which supports tabs and split wins.
 
 ## Solution
 
-Display tmux sessions as tabs in the status line. The sessions _feel_ like tabs:
+Display tmux sessions as "tabs" in the status line:
 
-- The tabs can be manually ordered.
-- Closing a session does not detach the client (`set-option -g detach-on-destroy off`).
+- Closing a tab does not detach the client (`set-option -g detach-on-destroy off`).
 - Tabs display the abbreviated cwd, and tabs may be manually labeled overriding the cwd auto-label.
-
-tmux itself solves problem number 1, and this plugin solves problem number 2.
+- The tabs can be manually ordered.
 
 ## Features
 
@@ -93,7 +81,7 @@ Set these options to the keys you want before the plugin loads:
 set -g @session-new-key "t"             # Create session.
 set -g @session-kill-key "w"            # Kill the current session, with confirmation.
 set -g @session-last-key "Tab"          # Focus the last active session.
-set -g @session-label-key "L"           # Label the current session.
+set -g @session-label-key '\;'          # Label the current session.
 set -g @session-prev-key "Up"           # Select left session.
 set -g @session-next-key "Down"         # Select right session.
 set -g @session-move-left-key "Left"    # Move current session left.
