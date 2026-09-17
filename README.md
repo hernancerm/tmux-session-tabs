@@ -8,17 +8,11 @@ Target audience: People who use tmux locally and want to see sessions at a glanc
 
 ## Problem
 
-I want to group terminals by project, where each project is the cwd. I do not want to have to
-manually name tmux sessions, and I want to see my "open projects" at a glance at all times. In other
-words, I want tmux to feel more like a terminal emulator which supports tabs and split wins.
+Sessions in tmux do not feel like tabs, I want them to feel like tabs.
 
 ## Solution
 
-Display tmux sessions as "tabs" in the status line:
-
-- Closing a tab does not detach the client (`set-option -g detach-on-destroy off`).
-- Tabs display the abbreviated cwd, and tabs may be manually labeled overriding the cwd auto-label.
-- The tabs can be manually ordered.
+Display tmux sessions as "tabs" in the status line.
 
 ## Features
 
