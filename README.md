@@ -58,7 +58,7 @@ Or, manually:
 run-shell ~/path/to/tmux-session-tabs/session-tabs.tmux
 ```
 
-Finally, set [keybinds](#keybinds).
+Finally, do as described in [Keybinds](#keybinds).
 
 ## Keybinds
 
