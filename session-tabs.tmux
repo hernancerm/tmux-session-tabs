@@ -93,10 +93,11 @@ tmux set-option -g status-interval 1
 # HOOKS
 
 # The status line is rebuilt by `tmux-status-viewport`: it orders sessions, fits as many as the
-# client is wide, and writes `status-format[0]`.
+# client is wide, and writes `status-format[0]`. Hooks are arrays: an index keeps the config's own
+# hook on the same event, which a bare `set-hook` would overwrite.
 for hook in client-attached client-session-changed client-resized \
             session-created session-closed window-unlinked window-linked; do
-  tmux set-hook -g "${hook}" "run-shell ${scripts}/tmux-status-viewport"
+  tmux set-hook -g "${hook}[50]" "run-shell ${scripts}/tmux-status-viewport"
 done
 
 

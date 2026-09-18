@@ -2,10 +2,6 @@
 
 Display tmux sessions as tabs in the status line.
 
-Target audience: People who use tmux locally and want to see sessions at a glance.
-
-**Set your own keybinds after installation, see example keybinds in [Keybinds](#keybinds).**
-
 ## Problem
 
 Sessions in tmux do not feel like tabs, I want them to feel like tabs.
@@ -66,7 +62,6 @@ Finally, set [keybinds](#keybinds).
 
 ## Keybinds
 
-
 **The plugin binds no key on its own.**
 
 Set these options to the keys you want before the plugin loads:
@@ -95,6 +90,20 @@ Non-configurable mouse key binds for the status line:
 | --- | --- |
 | Middle click | Kill the clicked session or win, with confirmation. |
 | Left click | Focus the clicked session or window. |
+
+## What the plugin sets
+
+These global options are written on load, on top of anything the config set:
+
+| Option | Value | Why |
+| --- | --- | --- |
+| `status-format[0]` | the tabs | The status line itself. |
+| `status-interval` | `1` | The cwd label only updates on redraw. |
+| `detach-on-destroy` | `off` | Killing the current session moves the client instead of ending tmux. |
+
+Hooks on `client-attached`, `client-session-changed`, `client-resized`, `session-created`,
+`session-closed`, `window-linked` and `window-unlinked` are set at index `50`, so hooks the config
+sets on those events (at other indexes) are kept.
 
 ## Style
 
