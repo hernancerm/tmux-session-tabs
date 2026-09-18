@@ -33,7 +33,7 @@ Display tmux sessions as "tabs" in the status line.
     options, so each status line is scoped to each session instead of each client.
 - Themes compatibility.
   - Catppuccin and other themes do not play well with this plugin, because both use
-     `status-format[0]`.
+    `status-format[0]`. The theme's colors can still be reused, see [Style](#style).
 - Session names.
   - Sessions are automatically named with an integer, so `tmux ls` and any other command that
     exposes the real session names outputs meaningless names. This limitation does not apply when
@@ -116,6 +116,9 @@ To change the status line colors, set these options:
 | `@session-right-text` | empty | Text drawn on the right edge of the status line. |
 | `@session-right-text-width` | `0` | Columns reserved for `@session-right-text`. |
 | `@session-show-win-index` | `off` | `on` prefixes each win with its index, as `0:zsh`. |
+
+The styles hold a format, so a theme's colors can be reused, e.g. with Catppuccin:
+`set -g @session-style-fill "bg=#{@thm_surface_0},fg=#{@thm_subtext_0}"`.
 
 ## Right-edge text
 
