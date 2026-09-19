@@ -197,3 +197,4 @@ The status line survives a config reload by storing its state in tmux options:
 | `@label` | session | The name drawn on the line, empty for the shortened cwd. |
 | `@sessions-viewport-start` | session | Index of the first session shown, the scroll position. |
 | `@sessions-hidden-left` / `-right` | session | Counts drawn in the `<` and `>` markers. |
+| `@sessions-line` | session | Copy of the session's `status-format[0]`, to skip unchanged writes. |

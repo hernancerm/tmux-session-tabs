@@ -11,17 +11,18 @@ style_fill="$(tmux show-option -gqv @session-style-fill)"
 style_sel="$(tmux show-option -gqv @session-style-sel)"
 right_width="$(tmux show-option -gqv @session-right-text-width)"
 
-# `was`, `measured`, `client_width` and `client_tty` are keyed by the number in the session id
-# (`$3` -> 3): bash 3.2, the one macOS ships, has no associative arrays, and a session id is
-# always `$` and a number.
+# `was`, `measured`, `client_width`, `client_tty` and the `drawn_*` arrays are keyed by the number
+# in the session id (`$3` -> 3): bash 3.2, the one macOS ships, has no associative arrays, and a
+# session id is always `$` and a number.
 
-# A line is built per attached session, not once for the server: `status-format` is a session
-# option, so two clients on different sessions each get their own width and their own highlight.
-# Two clients on one session still share a line, tmux has no per-client option; the narrower one
-# decides, as tmux does when it sizes a shared session.
+# A line is built per session, not once for the server: `status-format` is a session option, so
+# two clients on different sessions each get their own width and their own highlight. Two clients
+# on one session still share a line, tmux has no per-client option; the narrower one decides, as
+# tmux does when it sizes a shared session.
 attached=()
 client_width=()
 client_tty=()
+narrowest=0
 width=""
 sid=""
 tty=""
@@ -36,6 +37,10 @@ while read -r width sid tty; do
   elif (( width < client_width[num] )); then
     client_width[num]="${width}"
   fi
+
+  if (( narrowest == 0 || width < narrowest )); then
+    narrowest="${width}"
+  fi
 done < <(tmux list-clients -F '#{client_width} #{session_id} #{client_tty}')
 
 # Order the sessions. A session without an `@order` goes last, in creation order: that is a session
@@ -43,21 +48,36 @@ done < <(tmux list-clients -F '#{client_width} #{session_id} #{client_tty}')
 # new, then by `@order` or by the id, which counts up with every session tmux makes.
 entries=()
 was=()
+drawn_start=()
+drawn_left=()
+drawn_right=()
+drawn_line=()
 entry=""
 order=""
+scroll=""
+left=""
+right=""
+line=""
 id=""
 
-while IFS= read -r entry; do
-  order="${entry%% *}"
-  id="${entry##* }"
-  was[${id#\$}]="${order}"
+# What each session holds now rides along, rather than being asked for per session: every extra call
+# to the server is felt as lag when a key is held down to switch or move sessions. The line goes
+# last, `read` leaves the colons in it alone.
+while IFS=: read -r id order scroll left right line; do
+  num="${id#\$}"
+  was[num]="${order}"
+  drawn_start[num]="${scroll}"
+  drawn_left[num]="${left}"
+  drawn_right[num]="${right}"
+  drawn_line[num]="${line}"
 
   if [[ -n "${order}" ]]; then
     entries+=("1 ${order} ${id}")
   else
     entries+=("2 ${id#\$} ${id}")
   fi
-done < <(tmux list-sessions -F '#{@order} #{session_id}')
+done < <(tmux list-sessions -F '#{session_id}:#{@order}:#{@sessions-viewport-start}:'\
+'#{@sessions-hidden-left}:#{@sessions-hidden-right}:#{@sessions-line}')
 
 # Index 0 stays empty: `ids[i]` is the session whose `@order` is `i`, and those count from 1.
 ids=("")
@@ -176,7 +196,8 @@ fit_line() {
   # name order `#{S:}` walks in. The style goes ahead of the loop: the item it wraps is the only
   # one that loop draws. Picking it here, rather than with a `#{?...}` in the format, is what the
   # comma in `bg=...,fg=...` forces: a format would read it as the separator between the branches
-  # of the conditional.
+  # of the conditional. The item goes by reference, not copied in: every session holds a line, and
+  # copies of the item in each would outgrow what one `tmux` call can carry, see `flush`.
   line=""
 
   for (( i = start; i <= last; i++ )); do
@@ -186,15 +207,33 @@ fit_line() {
       line+="#[${style_fill}]"
     fi
 
-    line+="#{S:#{?#{==:#{session_id},${ids[i]}},${item},}}"
+    line+="#{S:#{?#{==:#{session_id},${ids[i]}},#{E:@session-item},}}"
   done
 
   line="${skeleton//%%SESSIONS%%/${line}}"
 }
 
-# One invocation: every command to the server costs a process and a round trip, and this runs on
-# every session switch, resize and window change.
+# As few invocations as fit: every command to the server costs a process and a round trip, and this
+# runs on every session switch, resize and window change. One call carries at most 16 KiB, past
+# which tmux rejects it whole ("command too long"), so the writes go out in batches under that.
 cmd=()
+size=0
+add=0
+budget=12000
+
+# Send what `cmd` holds, dropping the separator after its last command rather than rely on every
+# supported tmux taking a trailing one. A failing hook script prints an error over the line, hence
+# the silenced stderr.
+flush() {
+  if (( ${#cmd[@]} == 0 )); then
+    return
+  fi
+
+  unset "cmd[$(( ${#cmd[@]} - 1 ))]"
+  tmux "${cmd[@]}" 2>/dev/null
+  cmd=()
+  size=0
+}
 
 # The global line is what a session nobody is attached to draws, for the instant between a client
 # attaching and the `client-attached` hook writing that session its own. Width 0 means every
@@ -206,31 +245,60 @@ cmd+=(set-option -g 'status-format[0]' "${line}" ';')
 cmd+=(set-option -g @sessions-hidden-left 0 ';')
 cmd+=(set-option -g @sessions-hidden-right 0 ';')
 
-for sid in "${attached[@]}"; do
+# Every session gets its line, not only the attached ones: a switch draws the line the session
+# already holds, and only then does the hook rewrite it. A stale one shows for that instant, e.g. a
+# session closed since, and the tabs jump when the fresh one replaces it. A session no client is on
+# is fit to the narrowest client.
+for (( i = 1; i <= count; i++ )); do
+  sid="${ids[i]}"
   num="${sid#\$}"
-  fit_line "${client_width[num]}" "${sid}" \
-      "$(tmux show-option -t "${sid}" -qv @sessions-viewport-start)"
+  width="${client_width[num]}"
 
-  cmd+=(set-option -t "${sid}" 'status-format[0]' "${line}" ';')
+  if [[ -z "${width}" ]]; then
+    width="${narrowest}"
+  fi
+
+  fit_line "${width}" "${sid}" "${drawn_start[num]}"
+  left=$(( start - 1 ))
+  right=$(( count - last ))
+
+  # Only what changed is written: each write costs tmux a pass over every session and client, and
+  # most sessions' lines stay as they were. `@sessions-line` keeps a copy of the line to compare
+  # against, since `status-format[0]` cannot be read back in a format. The 200 covers the other
+  # commands and their ids.
+  add=200
+  if [[ "${line}" != "${drawn_line[num]}" ]]; then
+    add=$(( add + 2 * ${#line} ))
+  fi
+  if (( size + add > budget )); then
+    flush
+  fi
+  size=$(( size + add ))
+
+  if [[ "${line}" != "${drawn_line[num]}" ]]; then
+    cmd+=(set-option -t "${sid}" 'status-format[0]' "${line}" ';')
+    cmd+=(set-option -t "${sid}" @sessions-line "${line}" ';')
+  fi
   # The scroll position, kept across runs. Session-scoped like the line: two clients scrolled to
   # different places would otherwise fight over one number.
-  cmd+=(set-option -t "${sid}" @sessions-viewport-start "${start}" ';')
-  cmd+=(set-option -t "${sid}" @sessions-hidden-left "$(( start - 1 ))" ';')
-  cmd+=(set-option -t "${sid}" @sessions-hidden-right "$(( count - last ))" ';')
+  if [[ "${start}" != "${drawn_start[num]}" ]]; then
+    cmd+=(set-option -t "${sid}" @sessions-viewport-start "${start}" ';')
+  fi
+  if [[ "${left}" != "${drawn_left[num]}" ]]; then
+    cmd+=(set-option -t "${sid}" @sessions-hidden-left "${left}" ';')
+  fi
+  if [[ "${right}" != "${drawn_right[num]}" ]]; then
+    cmd+=(set-option -t "${sid}" @sessions-hidden-right "${right}" ';')
+  fi
 done
 
 # The redraws go after every write, not next to the one they belong to: tmux stops a command
 # sequence at the first failure, and `refresh-client` fails on a client that detached since
-# `list-clients` ran. A failing hook script prints an error over the line, hence the silenced
-# stderr.
+# `list-clients` ran.
 for sid in "${attached[@]}"; do
   num="${sid#\$}"
   cmd+=(refresh-client -S -t "${client_tty[num]}" ';')
 done
 
-# Drop the separator after the last command, rather than rely on every supported tmux taking a
-# trailing one.
-unset "cmd[$(( ${#cmd[@]} - 1 ))]"
-
-tmux "${cmd[@]}" 2>/dev/null
+flush
 exit 0
