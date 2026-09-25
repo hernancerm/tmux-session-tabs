@@ -13,10 +13,10 @@ scripts="${plugin}/scripts"
 
 # Styles are only defaulted, so a `.tmux.conf` that sets them before loading the plugin wins.
 if [[ -z "$(tmux show-option -gqv @session-style-fill)" ]]; then
-  tmux set-option -g @session-style-fill "bg=#f0f6fe,fg=#6e7781"
+  tmux set-option -g @session-style-fill "bg=terminal,fg=terminal"
 fi
 if [[ -z "$(tmux show-option -gqv @session-style-sel)" ]]; then
-  tmux set-option -g @session-style-sel "bg=#4689e0,fg=#ffffff"
+  tmux set-option -g @session-style-sel "bg=green,fg=black"
 fi
 if [[ -z "$(tmux show-option -gqv @session-show-win-index)" ]]; then
   tmux set-option -g @session-show-win-index "off"
