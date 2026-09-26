@@ -43,6 +43,8 @@ Display tmux sessions as "tabs" in the status line.
 
 ## Requirements
 
+TODO: wait for tmux 3.8
+
 - bash >=3.2 (macOS out-of-the-box satisfies this.)
 - tmux >=3.8 (for the theme colours in the default styles.)
 
