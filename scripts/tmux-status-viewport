@@ -200,11 +200,13 @@ fit_line() {
   # copies of the item in each would outgrow what one `tmux` call can carry, see `flush`.
   line=""
 
+  # `#[none]` drops attributes the previous style turned on, e.g. `reverse` in a custom
+  # `@session-style-sel`, which would otherwise carry into the next session.
   for (( i = start; i <= last; i++ )); do
     if [[ "${ids[i]}" = "${current}" ]]; then
-      line+="#[${style_sel}]"
+      line+="#[none]#[${style_sel}]"
     else
-      line+="#[${style_fill}]"
+      line+="#[none]#[${style_fill}]"
     fi
 
     line+="#{S:#{?#{==:#{session_id},${ids[i]}},#{E:@session-item},}}"

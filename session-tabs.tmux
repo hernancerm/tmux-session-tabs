@@ -13,10 +13,13 @@ scripts="${plugin}/scripts"
 
 # Styles are only defaulted, so a `.tmux.conf` that sets them before loading the plugin wins.
 if [[ -z "$(tmux show-option -gqv @session-style-fill)" ]]; then
-  tmux set-option -g @session-style-fill "bg=terminal,fg=terminal"
+  tmux set-option -g @session-style-fill "bg=themegreen,fg=themeblack"
 fi
 if [[ -z "$(tmux show-option -gqv @session-style-sel)" ]]; then
-  tmux set-option -g @session-style-sel "bg=green,fg=black"
+  tmux set-option -g @session-style-sel "bg=themegreen,fg=themeblack"
+fi
+if [[ -z "$(tmux show-option -gqv @session-style-sel-inner)" ]]; then
+  tmux set-option -g @session-style-sel-inner "underscore"
 fi
 if [[ -z "$(tmux show-option -gqv @session-show-win-index)" ]]; then
   tmux set-option -g @session-show-win-index "off"
@@ -26,6 +29,8 @@ if [[ -z "$(tmux show-option -gqv @session-right-text-width)" ]]; then
 fi
 
 style_fill="$(tmux show-option -gqv @session-style-fill)"
+style_sel="$(tmux show-option -gqv @session-style-sel)"
+style_sel_inner="$(tmux show-option -gqv @session-style-sel-inner)"
 
 # What the tabs leave empty (the gap before `@session-right-text`) is painted with `status-style`, a
 # global the config or a theme owns. `fill=` paints the line here instead, so the plugin looks
@@ -66,8 +71,16 @@ fi
 WINDOW_LIST="#{W:#[range=user|#{session_id}:#{window_index}]\
 ${WINDOW_INDEX}#{window_name}#{window_flags}#[norange]#{?window_end_flag,,#,}}"
 
-SESSION_ITEM="#[range=user|#{session_id}]  ${SESSION_LABEL}(#[norange]\
-${WINDOW_LIST}#[range=user|#{session_id}])  #[norange]"
+# The current session is wrapped in `[]`, which take the place of a space on each side, so tabs keep
+# their width and do not shift on switch. `client_session` is the session whose line this is.
+# Inside the `[]`, `@session-style-sel-inner` applies; `]` goes back to `@session-style-sel`. The
+# styles sit in a conditional, so their commas are escaped as `#,`, else they split its branches.
+IS_CURRENT="#{==:#{session_name},#{client_session}}"
+OPEN="#{?${IS_CURRENT},[#[${style_sel_inner//,/#,}], }"
+CLOSE="#{?${IS_CURRENT},#[none]#[${style_sel//,/#,}]], }"
+
+SESSION_ITEM="#[range=user|#{session_id}] ${OPEN}${SESSION_LABEL}(#[norange]\
+${WINDOW_LIST}#[range=user|#{session_id}])${CLOSE} #[norange]"
 
 # Sessions outside the viewport are left out of the line, and counted on the edge they fell off.
 HIDDEN_LEFT="#{?@sessions-hidden-left, <#{@sessions-hidden-left},}"
@@ -84,7 +97,7 @@ RIGHT="#[align=right]#[${style_fill}]#{E:@session-right-text}"
 # session by expanding the item too, to know how many fit.
 tmux set-option -g @session-item "${SESSION_ITEM}"
 tmux set-option -g @status-skeleton "${style_gap}#[align=left]#[${style_fill}]${HIDDEN_LEFT}\
-%%SESSIONS%%#[${style_fill}]${HIDDEN_RIGHT}${RIGHT}"
+%%SESSIONS%%#[none]#[${style_fill}]${HIDDEN_RIGHT}${RIGHT}"
 
 # The cwd label only updates on redraw, so keep this low.
 tmux set-option -g status-interval 1

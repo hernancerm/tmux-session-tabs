@@ -44,7 +44,7 @@ Display tmux sessions as "tabs" in the status line.
 ## Requirements
 
 - bash >=3.2 (macOS out-of-the-box satisfies this.)
-- tmux >=3.2
+- tmux >=3.8 (for the theme colours in the default styles.)
 
 ## Installation
 
@@ -113,8 +113,9 @@ To change the status line colors, set these options:
 
 | Option | Default | What it does |
 | --- | --- | --- |
-| `@session-style-sel` | `bg=green,fg=black` | Styles the current session. |
-| `@session-style-fill` | `bg=terminal,fg=terminal` | Styles every non-current session. |
+| `@session-style-sel` | `bg=themegreen,fg=themeblack` | Styles the current session. |
+| `@session-style-sel-inner` | `underscore` | Added inside the current session's `[]`. `none` for nothing. |
+| `@session-style-fill` | `bg=themegreen,fg=themeblack` | Styles every non-current session. |
 | `@session-right-text` | empty | Text drawn on the right edge of the status line. |
 | `@session-right-text-width` | `0` | Columns reserved for `@session-right-text`. |
 | `@session-show-win-index` | `off` | `on` prefixes each win with its index, as `0:zsh`. |
