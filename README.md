@@ -4,28 +4,17 @@ Display tmux sessions as tabs in the status line.
 
 https://github.com/user-attachments/assets/ddbf3b83-0e47-4d3f-96bc-528d219e9637
 
-## Problem
-
-Sessions in tmux do not feel like tabs, I want them to feel like tabs.
-
-## Solution
-
-Display tmux sessions as "tabs" in the status line.
-
 ## Features
 
 - Display tmux sessions as tabs in the status line.
+- Each session is auto-labeled with the abbreviated cwd, in the status line.
+  - Optionally, sessions can be manually labeled.
 - Expose options to set key binds for plugin actions, e.g., re-order tabs.
-- In the status line, each session is auto-labeled with the abbreviated cwd (the "project name").
-- Optionally, sessions can be manually labeled. This does `rename-session` and reflects it in the
-  status line.
 - Optionally, add arbitrary text on the right edge of the status line.
-- Gracefully handle overflow with `<`/`>` markers in the status line.
-- Support mouse to focus or close session or win.
-- Partially support multiple clients.
+- Gracefully handle overflow with markers in the status line.
 - Closing sessions does not detach the client.
+- Support mouse to focus or close session or win.
 - Configure the status line colors.
-- Status line survives a config reload.
 
 ## Limitations
 
@@ -35,18 +24,19 @@ Display tmux sessions as "tabs" in the status line.
     options, so each status line is scoped to each session instead of each client.
 - Themes compatibility.
   - Catppuccin and other themes do not play well with this plugin, because both use
-    `status-format[0]`. The theme's colors can still be reused, see [Style](#style).
+    `status-format[0]`. However, the theme's colors can still be reused through manual
+    configuration, see [Style](#style).
 - Session names.
   - Sessions are automatically named with an integer, so `tmux ls` and any other command that
     exposes the real session names outputs meaningless names. This limitation does not apply when
-    [labelling sessions](#labels), it only applies when using the default cwd auto-labeling.
+    labelling sessions, see [Labels](#labels), it only applies when using the default cwd auto-labeling.
 
 ## Requirements
 
 TODO: wait for tmux 3.8
 
 - bash >=3.2 (macOS out-of-the-box satisfies this.)
-- tmux >=3.8 (for the theme colours in the default styles.)
+- tmux >=3.8 (for the colors in the default styles.)
 
 ## Installation
 
@@ -62,7 +52,14 @@ Or, manually:
 run-shell ~/path/to/tmux-session-tabs/session-tabs.tmux
 ```
 
-Finally, do as described in [Keybinds](#keybinds).
+After installation, the **required** user-supplied configuration is:
+
+- [Keybinds](#keybinds).
+
+Optional user-supplied configuration is:
+
+- [Style](#style)
+- [Right edge text](#right-edge-text)
 
 ## Keybinds
 
@@ -72,13 +69,13 @@ Set these options to the keys you want before the plugin loads:
 
 ```text
 set -g @session-new-key "t"             # Create session.
-set -g @session-kill-key "w"            # Kill the current session, with confirmation.
+set -g @session-kill-key "w"            # Kill the current session.
 set -g @session-last-key "Tab"          # Focus the last active session.
 set -g @session-label-key '\;'          # Label the current session.
 set -g @session-prev-key "Up"           # Select left session.
 set -g @session-next-key "Down"         # Select right session.
-set -g @session-move-left-key "Left"    # Move current session left.
-set -g @session-move-right-key "Right"  # Move current session right.
+set -g @session-move-right-key "Right"  # Move session right.
+set -g @session-move-left-key "Left"    # Move session left.
 ```
 
 Repeatable without prefix (`-r` behavior):
@@ -116,13 +113,13 @@ To change the status line colors, set these options:
 | Option | Default | What it does |
 | --- | --- | --- |
 | `@session-style-sel` | `bg=themegreen,fg=themeblack` | Styles the current session. |
-| `@session-style-sel-inner` | `underscore` | Added inside the current session's markers. `none` for nothing. |
-| `@session-sel-left` | `[` | Left marker of the current session. `" "` for none. |
-| `@session-sel-right` | `]` | Right marker of the current session. `" "` for none. |
+| `@session-style-sel-inner` | `underscore` | Styles inside the current session's markers.<br> Set `none` for nothing. |
+| `@session-sel-left` | `[` | Left marker of the current session.<br>Set `" "` for none. |
+| `@session-sel-right` | `]` | Right marker of the current session.<br>Set `" "` for none. |
 | `@session-style-fill` | `bg=themegreen,fg=themeblack` | Styles every non-current session. |
 | `@session-right-text` | empty | Text drawn on the right edge of the status line. |
 | `@session-right-text-width` | `0` | Columns reserved for `@session-right-text`. |
-| `@session-show-win-index` | `off` | `on` prefixes each win with its index, as `0:zsh`. |
+| `@session-show-win-index` | `off` | `on` prefixes each win with its index. |
 
 The styles hold a format, so a theme's colors can be reused, e.g. with Catppuccin:
 `set -g @session-style-fill "bg=#{@thm_surface_0},fg=#{@thm_subtext_0}"`.
