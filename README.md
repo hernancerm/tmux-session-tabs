@@ -187,6 +187,14 @@ line:
 `@session-label-key` sets a label and renames the session to match, making both parts agree. Use
 this only when wanting an explicit label for a session. See [Keybinds](#keybinds).
 
+The abbreviated cwd is the active pane's. By default, tmux opens a new window in the session's start
+dir, not in the current pane's, so the tab is relabeled. To keep the label, open new windows in the
+current pane's dir:
+
+```tmux
+bind c new-window -c "#{pane_current_path}"
+```
+
 ## State
 
 The status line survives a config reload by storing its state in tmux options:
