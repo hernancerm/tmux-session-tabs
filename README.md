@@ -2,7 +2,7 @@
 
 Display tmux sessions as tabs in the status line.
 
-https://github.com/user-attachments/assets/463ee565-a258-41b6-affc-ac1749064f94
+https://github.com/user-attachments/assets/ddbf3b83-0e47-4d3f-96bc-528d219e9637
 
 ## Problem
 
