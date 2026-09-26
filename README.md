@@ -2,6 +2,8 @@
 
 Display tmux sessions as tabs in the status line.
 
+<!-- Demo video: paste the github.com/user-attachments URL on its own line here. See demo/README.md. -->
+
 ## Problem
 
 Sessions in tmux do not feel like tabs, I want them to feel like tabs.
