@@ -116,7 +116,9 @@ To change the status line colors, set these options:
 | Option | Default | What it does |
 | --- | --- | --- |
 | `@session-style-sel` | `bg=themegreen,fg=themeblack` | Styles the current session. |
-| `@session-style-sel-inner` | `underscore` | Added inside the current session's `[]`. `none` for nothing. |
+| `@session-style-sel-inner` | `underscore` | Added inside the current session's markers. `none` for nothing. |
+| `@session-sel-left` | `[` | Left marker of the current session. `" "` for none. |
+| `@session-sel-right` | `]` | Right marker of the current session. `" "` for none. |
 | `@session-style-fill` | `bg=themegreen,fg=themeblack` | Styles every non-current session. |
 | `@session-right-text` | empty | Text drawn on the right edge of the status line. |
 | `@session-right-text-width` | `0` | Columns reserved for `@session-right-text`. |

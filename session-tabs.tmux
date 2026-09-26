@@ -21,6 +21,12 @@ fi
 if [[ -z "$(tmux show-option -gqv @session-style-sel-inner)" ]]; then
   tmux set-option -g @session-style-sel-inner "underscore"
 fi
+if [[ -z "$(tmux show-option -gqv @session-sel-left)" ]]; then
+  tmux set-option -g @session-sel-left "["
+fi
+if [[ -z "$(tmux show-option -gqv @session-sel-right)" ]]; then
+  tmux set-option -g @session-sel-right "]"
+fi
 if [[ -z "$(tmux show-option -gqv @session-show-win-index)" ]]; then
   tmux set-option -g @session-show-win-index "off"
 fi
@@ -31,6 +37,8 @@ fi
 style_fill="$(tmux show-option -gqv @session-style-fill)"
 style_sel="$(tmux show-option -gqv @session-style-sel)"
 style_sel_inner="$(tmux show-option -gqv @session-style-sel-inner)"
+sel_left="$(tmux show-option -gqv @session-sel-left)"
+sel_right="$(tmux show-option -gqv @session-sel-right)"
 
 # What the tabs leave empty (the gap before `@session-right-text`) is painted with `status-style`, a
 # global the config or a theme owns. `fill=` paints the line here instead, so the plugin looks
@@ -71,13 +79,19 @@ fi
 WINDOW_LIST="#{W:#[range=user|#{session_id}:#{window_index}]\
 ${WINDOW_INDEX}#{window_name}#{window_flags}#[norange]#{?window_end_flag,,#,}}"
 
-# The current session is wrapped in `[]`, which take the place of a space on each side, so tabs keep
-# their width and do not shift on switch. `client_session` is the session whose line this is.
-# Inside the `[]`, `@session-style-sel-inner` applies; `]` goes back to `@session-style-sel`. The
-# styles sit in a conditional, so their commas are escaped as `#,`, else they split its branches.
+# The current session is wrapped in `@session-sel-left`/`-right` (`[]` by default), which take the
+# place of a space on each side, so 1-column markers keep tabs from shifting on switch.
+# `client_session` is the session whose line this is. Inside the markers, `@session-style-sel-inner`
+# applies; the right marker goes back to `@session-style-sel`. All of it sits in a conditional, so
+# `#`, `,` and `}` are escaped, else a marker like `}` would end its branch early.
+escape_cond() {
+  local s="${1//#/##}" brace="}"
+  s="${s//,/#,}"
+  printf '%s' "${s//${brace}/#${brace}}"
+}
 IS_CURRENT="#{==:#{session_name},#{client_session}}"
-OPEN="#{?${IS_CURRENT},[#[${style_sel_inner//,/#,}], }"
-CLOSE="#{?${IS_CURRENT},#[none]#[${style_sel//,/#,}]], }"
+OPEN="#{?${IS_CURRENT},$(escape_cond "${sel_left}")#[${style_sel_inner//,/#,}], }"
+CLOSE="#{?${IS_CURRENT},#[none]#[${style_sel//,/#,}]$(escape_cond "${sel_right}"), }"
 
 SESSION_ITEM="#[range=user|#{session_id}] ${OPEN}${SESSION_LABEL}(#[norange]\
 ${WINDOW_LIST}#[range=user|#{session_id}])${CLOSE} #[norange]"
