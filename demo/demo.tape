@@ -7,7 +7,12 @@ Set Theme "GitHub Dark"
 Set FontSize 20
 Set Width 1200
 Set Height 600
-Set Padding 0
+Set Padding 10
+Set Margin 40
+Set MarginFill "#2f5f3a"
+Set WindowBar Colorful
+Set WindowBarSize 50
+Set BorderRadius 10
 Set TypingSpeed 60ms
 
 # Start tmux off camera. `-L` gives the demo its own server, so the user's sessions stay out.
