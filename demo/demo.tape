@@ -7,9 +7,7 @@ Set Theme "GitHub Dark"
 Set FontSize 20
 Set Width 1200
 Set Height 600
-Set Padding 20
-Set Margin 80
-Set MarginFill "#20642f"
+Set Padding 10
 Set WindowBar Colorful
 Set WindowBarSize 50
 Set BorderRadius 20
