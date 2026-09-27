@@ -58,8 +58,8 @@ After installation, the **required** user-supplied configuration is:
 
 Optional user-supplied configuration is:
 
-- [Style](#style)
 - [Right edge text](#right-edge-text)
+- [Style](#style)
 
 ## Keybinds
 
@@ -106,24 +106,6 @@ Hooks on `client-attached`, `client-session-changed`, `client-resized`, `session
 `session-closed`, `window-linked` and `window-unlinked` are set at index `50`, so hooks the config
 sets on those events (at other indexes) are kept.
 
-## Style
-
-To change the status line colors, set these options:
-
-| Option | Default | What it does |
-| --- | --- | --- |
-| `@session-style-sel` | `bg=themegreen,fg=themeblack` | Styles the current session. |
-| `@session-style-sel-inner` | `underscore` | Styles inside the current session's markers.<br> Set `none` for nothing. |
-| `@session-sel-left` | `[` | Left marker of the current session.<br>Set `" "` for none. |
-| `@session-sel-right` | `]` | Right marker of the current session.<br>Set `" "` for none. |
-| `@session-style-fill` | `bg=themegreen,fg=themeblack` | Styles every non-current session. |
-| `@session-right-text` | empty | Text drawn on the right edge of the status line. |
-| `@session-right-text-width` | `0` | Columns reserved for `@session-right-text`. |
-| `@session-show-win-index` | `off` | `on` prefixes each win with its index. |
-
-The styles hold a format, so a theme's colors can be reused, e.g. with Catppuccin:
-`set -g @session-style-fill "bg=#{@thm_surface_0},fg=#{@thm_subtext_0}"`.
-
 ## Right-edge text
 
 The tabs are left-aligned. On the right edge, text can be displayed via `@session-right-text`. It
@@ -161,6 +143,24 @@ option belongs to the config or a theme.
 
 One consequence: in the right-edge text, `#[default]` returns to `status-style`, not to
 `@session-style-fill`. Set an explicit style instead of relying on `#[default]`.
+
+## Style
+
+To change the status line colors, set these options:
+
+| Option | Default | What it does |
+| --- | --- | --- |
+| `@session-style-sel` | `bg=themegreen,fg=themeblack` | Styles the current session. |
+| `@session-style-sel-inner` | `underscore` | Styles in the current session's markers.<br> Set `none` for nothing. |
+| `@session-sel-left` | `[` | Left marker of the current session.<br>Set `" "` for none. |
+| `@session-sel-right` | `]` | Right marker of the current session.<br>Set `" "` for none. |
+| `@session-style-fill` | `bg=themegreen,fg=themeblack` | Styles every non-current session. |
+| `@session-right-text` | empty | Text on the right edge of the status line. |
+| `@session-right-text-width` | `0` | Columns for `@session-right-text`. |
+| `@session-show-win-index` | `off` | `on` prefixes each win with its index. |
+
+The styles hold a format, so a theme's colors can be reused, e.g. with Catppuccin:
+`set -g @session-style-fill "bg=#{@thm_surface_0},fg=#{@thm_subtext_0}"`.
 
 ## Introspection
 
