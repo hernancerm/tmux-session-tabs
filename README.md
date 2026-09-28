@@ -8,6 +8,11 @@ https://github.com/user-attachments/assets/b4c45739-12fb-48d2-b140-b91e9f11ea8d
 
 - Display tmux sessions as tabs in the status line.
 - Each session is auto-labeled with the abbreviated cwd, in the status line.
+  - This auto-labeling is convenient for workflows relying on
+    [zoxide](https://github.com/ajeetdsouza/zoxide) or
+    [zsh-trampoline](https://github.com/hernancerm/zsh-trampoline) to quickly change the cwd.
+    Additionally, staying in the same dir per session makes this auto-labeling make even more sense,
+    e.g., conceptualizing each dir as a project to `cd` into.
   - Optionally, sessions can be manually labeled.
 - Expose options to set key binds for plugin actions, e.g., re-order tabs.
 - Optionally, add arbitrary text on the right edge of the status line.
