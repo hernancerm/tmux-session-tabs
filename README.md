@@ -38,8 +38,6 @@ https://github.com/user-attachments/assets/b4c45739-12fb-48d2-b140-b91e9f11ea8d
 
 ## Requirements
 
-TODO: wait for tmux 3.8
-
 - bash >=3.2 (macOS out-of-the-box satisfies this.)
 - tmux >=3.8 (for the colors in the default styles.)
 
